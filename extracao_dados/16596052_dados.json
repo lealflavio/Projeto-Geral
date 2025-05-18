@@ -1,0 +1,22 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16596052",
+    "tipo_intervencao": "Instalação",
+    "data_inicio": "21/04/2025",
+    "hora_inicio": "12:56h",
+    "data_fim": "21/04/2025",
+    "hora_fim": "17:22h"
+  },
+  "observacoes_tecnico": "Drop passado, serviços realizados. Tudo testado e ok.",
+  "equipamentos_entregues": [
+    "TV Box VBox Smart Serial Number 239375002646",
+    "ONT/Router Smart router Huawei Wi-Fi 7 Serial Number 48575443472753B1"
+  ],
+  "materiais_usados": [
+    "Descrição Quantidade",
+    "2F0 c/ Pigtail (uni) 2.0",
+    "Mangas Fusão (uni) 3.0",
+    "Pigtail (uni) 2.0",
+    "Fibra Interior (m) 20.0"
+  ]
+}

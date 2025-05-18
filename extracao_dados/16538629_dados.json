@@ -1,0 +1,15 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16538629",
+    "tipo_intervencao": "Suporte",
+    "data_inicio": "04/04/2025",
+    "hora_inicio": "15:31h",
+    "data_fim": "04/04/2025",
+    "hora_fim": "15:42h"
+  },
+  "observacoes_tecnico": "Troca da box",
+  "equipamentos_entregues": [
+    "TV Box Vodafone TV PLAY Serial Number 239363659507"
+  ],
+  "materiais_usados": []
+}

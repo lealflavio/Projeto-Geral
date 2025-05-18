@@ -1,0 +1,12 @@
+import React from 'react';
+
+function Home() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-2">Bem-vindo ao Painel</h1>
+      <p className="text-gray-600">Use o menu lateral para navegar entre as funcionalidades.</p>
+    </div>
+  );
+}
+
+export default Home;

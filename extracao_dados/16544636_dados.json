@@ -1,0 +1,15 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16544636",
+    "tipo_intervencao": "Suporte",
+    "data_inicio": "07/04/2025",
+    "hora_inicio": "15:45h",
+    "data_fim": "07/04/2025",
+    "hora_fim": "16:13h"
+  },
+  "observacoes_tecnico": "Instalação de SWE em oferta, indicação VDF",
+  "equipamentos_entregues": [
+    "Super Wi-Fi Huawei AP/Repeater K562 Serial Number 48128F980F20"
+  ],
+  "materiais_usados": []
+}

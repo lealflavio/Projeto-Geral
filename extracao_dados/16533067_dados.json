@@ -1,0 +1,16 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16533067",
+    "tipo_intervencao": "Suporte",
+    "data_inicio": "04/04/2025",
+    "hora_inicio": "09:04h",
+    "data_fim": "04/04/2025",
+    "hora_fim": "10:10h"
+  },
+  "observacoes_tecnico": "Troca de SWE, foi necessário também a troca do Router por questão de compatibilidade",
+  "equipamentos_entregues": [
+    "Super Wi-Fi Huawei AP/Repeater K562 Serial Number 48128F98FEFC",
+    "ONT/Router Smart router Huawei Wi-Fi 7 Serial Number 48575443FE6189B0"
+  ],
+  "materiais_usados": []
+}

@@ -1,0 +1,16 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16673314",
+    "tipo_intervencao": "Suporte",
+    "data_inicio": "13/05/2025",
+    "hora_inicio": "15:16h",
+    "data_fim": "13/05/2025",
+    "hora_fim": "15:48h"
+  },
+  "observacoes_tecnico": "Troca de equipamentos",
+  "equipamentos_entregues": [
+    "TV Box VBox Smart Serial Number 239375926383",
+    "ONT/Router Smart router Huawei Wi-Fi 7 Serial Number 48575443471A45B1"
+  ],
+  "materiais_usados": []
+}

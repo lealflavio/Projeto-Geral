@@ -1,0 +1,13 @@
+{
+  "dados_intervencao": {
+    "numero_intervencao": "16538415",
+    "tipo_intervencao": "Suporte",
+    "data_inicio": "05/04/2025",
+    "hora_inicio": "10:32h",
+    "data_fim": "05/04/2025",
+    "hora_fim": "10:55h"
+  },
+  "observacoes_tecnico": "Infraestrutura comprometida, poste está a abanar muito. Completamente solto. Não oferece as condições de segurança. Não há outro\n traçado disponível.",
+  "equipamentos_entregues": [],
+  "materiais_usados": []
+}
