@@ -102,15 +102,14 @@ const CadastroPage = () => {
           {...rest}
         />
         {isPassword && (
-          <div
-            onClick={() => setMostrarSenha(!mostrarSenha)}
-            className="absolute right-3 cursor-pointer text-gray-500"
-            tabIndex={0}
-            role="button"
-            aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-          >
+           <button
+             type="button"
+             onClick={() => setMostrarSenha(!mostrarSenha)}
+             className="absolute right-3 cursor-pointer text-gray-500 bg-transparent border-none p-0"
+             aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+           >
             {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
-          </div>
+           </button>
         )}
       </div>
     </div>
