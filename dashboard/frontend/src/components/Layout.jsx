@@ -14,6 +14,8 @@ const getPageTitle = (pathname) => {
       return "Minhas WOs";
     case "/perfil":
       return "Perfil";
+    case "/alocar-wo":
+      return "Alocar WO";
     default:
       return "";
   }
