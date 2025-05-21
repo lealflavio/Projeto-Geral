@@ -122,13 +122,13 @@ const CadastroPage = () => {
               className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
               value={whatsapp}
               onChange={e => setWhatsapp(e.target.value.replace(/\D/g, ""))}
-              placeholder="Somente números, ex: 11999998888"
+              placeholder="ex: 912345678"
               required
               inputMode="numeric"
               pattern="\d*"
               maxLength={13}
             />
-            <p className="text-xs text-[#999] mt-2 mb-2">Use DDD, só números.</p>
+            <p className="text-xs text-[#999] mt-2 mb-2">Só números.</p>
           </div>
 
           {erro && <p className="text-red-500 text-sm">{erro}</p>}
