@@ -5,18 +5,17 @@ from .routes import auth as auth_routes
 from .routes import dashboard as dashboard_routes
 from app.routes import auth, usuarios
 
+app = FastAPI(
+    title="Wondercom Dashboard API",
+    description="API para o sistema de dashboard da Wondercom, incluindo autenticação, gestão de créditos, KPIs e simulador de ganhos.",
+    version="0.1.0"
+)
 app.include_router(auth.router)
 app.include_router(usuarios.router)
 
 # Create all tables in the database.
 # This is useful for development but for production, you might want to use migrations (e.g., Alembic).
 Base.metadata.create_all(bind=engine)
-
-app = FastAPI(
-    title="Wondercom Dashboard API",
-    description="API para o sistema de dashboard da Wondercom, incluindo autenticação, gestão de créditos, KPIs e simulador de ganhos.",
-    version="0.1.0"
-)
 
 app.add_middleware(
     CORSMiddleware,
