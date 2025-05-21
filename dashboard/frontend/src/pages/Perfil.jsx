@@ -22,8 +22,9 @@ const Perfil = () => {
 
     try {
       const token = localStorage.getItem("authToken");
+      const apiUrl = import.meta.env.VITE_API_URL;
       await axios.put(
-        "http://localhost:8000/usuarios/integrar",
+        `${apiUrl}/usuarios/integrar`,
         {
           usuario_portal: usuarioPortal,
           senha_portal: senhaPortal,
@@ -94,57 +95,43 @@ const Perfil = () => {
           </button>
         )}
 
-        {mostrarFormulario && (
-          <form onSubmit={handleIntegrar} className="space-y-3 mt-2">
+        {!usuario.integrado && mostrarFormulario && (
+          <form onSubmit={handleIntegrar} className="space-y-3">
             <div>
-              <label className="block text-sm text-[#555] mb-1">Usuário do Portal</label>
-              <div className="flex items-center border rounded-xl p-2">
-                <User size={18} className="text-[#999] mr-2" />
-                <input
-                  type="text"
-                  placeholder="ex: joao.silva"
-                  className="flex-1 outline-none text-sm"
-                  value={usuarioPortal}
-                  onChange={(e) => setUsuarioPortal(e.target.value)}
-                  required
-                />
-              </div>
+              <label className="block text-sm text-[#777]">Usuário Portal</label>
+              <input
+                type="text"
+                className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                value={usuarioPortal}
+                onChange={(e) => setUsuarioPortal(e.target.value)}
+                required
+              />
             </div>
-
             <div>
-              <label className="block text-sm text-[#555] mb-1">Senha do Portal</label>
-              <div className="flex items-center border rounded-xl p-2">
-                <Lock size={18} className="text-[#999] mr-2" />
-                <input
-                  type="password"
-                  placeholder="Sua senha do portal"
-                  className="flex-1 outline-none text-sm"
-                  value={senhaPortal}
-                  onChange={(e) => setSenhaPortal(e.target.value)}
-                  required
-                />
-              </div>
+              <label className="block text-sm text-[#777]">Senha Portal</label>
+              <input
+                type="password"
+                className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                value={senhaPortal}
+                onChange={(e) => setSenhaPortal(e.target.value)}
+                required
+              />
             </div>
-
             <div>
-              <label className="block text-sm text-[#555] mb-1">WhatsApp</label>
-              <div className="flex items-center border rounded-xl p-2">
-                <Phone size={18} className="text-[#999] mr-2" />
-                <input
-                  type="text"
-                  placeholder="912345678"
-                  className="flex-1 outline-none text-sm"
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  required
-                />
-              </div>
+              <label className="block text-sm text-[#777]">WhatsApp</label>
+              <input
+                type="text"
+                className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                required
+              />
             </div>
-
             <button
               type="submit"
               className="w-full bg-[#7C3AED] text-white py-2 rounded-xl font-semibold hover:bg-[#6B21A8] transition"
             >
-              Salvar integração
+              Integrar
             </button>
           </form>
         )}
