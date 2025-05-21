@@ -128,7 +128,6 @@ const CadastroPage = () => {
               pattern="\d*"
               maxLength={13}
             />
-            <p className="text-xs text-[#999] mt-2 mb-2">Use apenas números.</p>
           </div>
 
           {erro && <p className="text-red-500 text-sm">{erro}</p>}
