@@ -1,30 +1,25 @@
-import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import axios from "axios";
-import { Lock, Mail, Phone, User, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, User, Mail, Lock, Phone } from "lucide-react";
 
 const CadastroPage = () => {
-  const navigate = useNavigate();
-  const nomeRef = useRef(null);
-
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [whatsapp, setWhatsapp] = useState("");
+
   const [integrar, setIntegrar] = useState(false);
   const [usuarioPortal, setUsuarioPortal] = useState("");
   const [senhaPortal, setSenhaPortal] = useState("");
   const [mostrarSenhaPortal, setMostrarSenhaPortal] = useState(false);
+  const [whatsapp, setWhatsapp] = useState("");
+
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  React.useEffect(() => {
-    if (nomeRef.current) {
-      nomeRef.current.focus();
-    }
-  }, []);
+  const navigate = useNavigate();
 
   const validarCampos = () => {
     if (nome.trim().length < 3) return "Nome deve ter pelo menos 3 caracteres.";
@@ -50,7 +45,6 @@ const CadastroPage = () => {
     }
 
     setCarregando(true);
-
     try {
       const response = await axios.post("http://localhost:8000/auth/register", {
         nome_completo: nome,
@@ -76,110 +70,53 @@ const CadastroPage = () => {
     }
   };
 
-  // Campo de input padronizado com acessibilidade, highlight, e ícone
-  const InputWithIcon = ({
-    id,
-    name,
-    label,
-    icon,
-    type,
-    placeholder,
-    value,
-    onChange,
-    inputRef,
-    isPassword,
-    mostrarSenha,
-    setMostrarSenha,
-    required,
-    autoComplete,
-    ...rest
-  }) => (
-    <div>
-      <label htmlFor={id} className="block text-sm text-[#777]">{label}</label>
-      <div className="relative flex items-center border border-gray-300 rounded-lg p-2 mt-1 focus-within:ring-2 focus-within:ring-[#7C3AED] transition-all bg-white">
-        {icon}
-        <input
-          id={id}
-          name={name}
-          ref={inputRef}
-          type={isPassword ? (mostrarSenha ? "text" : "password") : type}
-          placeholder={placeholder}
-          className="flex-1 outline-none text-sm bg-transparent pl-2"
-          value={value}
-          onChange={onChange}
-          required={required}
-          autoComplete={autoComplete}
-          {...rest}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            onClick={() => setMostrarSenha(!mostrarSenha)}
-            className="absolute right-3 cursor-pointer text-gray-500 bg-transparent border-none p-0"
-            aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-            tabIndex={0}
-          >
-            {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9] px-4">
       <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-sm">
         <h2 className="text-2xl font-semibold text-[#333] text-center mb-6">Criar Conta</h2>
-        <form onSubmit={handleCadastro} className="space-y-4" autoComplete="on">
+        <form onSubmit={handleCadastro} className="space-y-4">
+          <div>
+            <label className="block text-sm text-[#777]">Nome</label>
+            <input
+              type="text"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-[#777]">Email</label>
+            <input
+              type="email"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="relative">
+            <label className="block text-sm text-[#777]">Senha</label>
+            <input
+              type={mostrarSenha ? "text" : "password"}
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+            <div
+              onClick={() => setMostrarSenha(!mostrarSenha)}
+              className="absolute right-3 top-8 cursor-pointer text-gray-500"
+              style={{top: 38}}
+            >
+              {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+            </div>
+          </div>
 
-          <InputWithIcon
-            id="cadastro-nome"
-            name="nome"
-            label="Nome"
-            icon={<User size={18} className="text-[#999]" />}
-            type="text"
-            placeholder="ex: João"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            inputRef={nomeRef}        // SÓ O PRIMEIRO
-            required
-            autoComplete="name"
-          />
-
-          <InputWithIcon
-            id="cadastro-email"
-            name="email"
-            label="Email"
-            icon={<Mail size={18} className="text-[#999]" />}
-            type="email"
-            placeholder="ex: joao@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-
-          <InputWithIcon
-            id="cadastro-senha"
-            name="senha"
-            label="Senha"
-            icon={<Lock size={18} className="text-[#999]" />}
-            type="password"
-            placeholder="Mínimo 6 caracteres"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            isPassword
-            mostrarSenha={mostrarSenha}
-            setMostrarSenha={setMostrarSenha}
-            required
-            autoComplete="new-password"
-          />
-
-          {/* Toggle integração - switch colorido ao ativar */}
+          {/* Toggle integração */}
           <div className="flex items-center justify-between py-2">
-            <label htmlFor="cadastro-integrar" className="text-sm text-[#777]">Integrar com o portal K1?</label>
+            <label className="text-sm text-[#777]">Integrar com o portal K1?</label>
             <button
-              id="cadastro-integrar"
               type="button"
               onClick={() => setIntegrar(!integrar)}
               className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 border-none focus:outline-none
@@ -192,51 +129,46 @@ const CadastroPage = () => {
             </button>
           </div>
 
-          {/* Campos extras condicionais */}
           {integrar && (
             <>
-              <InputWithIcon
-                id="cadastro-usuario-portal"
-                name="usuarioPortal"
-                label="Usuário do Portal"
-                icon={<User size={18} className="text-[#999]" />}
-                type="text"
-                placeholder="ex: joao.silva"
-                value={usuarioPortal}
-                onChange={(e) => setUsuarioPortal(e.target.value)}
-                required
-                autoComplete="username"
-              />
-
-              <InputWithIcon
-                id="cadastro-senha-portal"
-                name="senhaPortal"
-                label="Senha do Portal"
-                icon={<Lock size={18} className="text-[#999]" />}
-                type="password"
-                placeholder="Sua senha do portal"
-                value={senhaPortal}
-                onChange={(e) => setSenhaPortal(e.target.value)}
-                isPassword
-                mostrarSenha={mostrarSenhaPortal}
-                setMostrarSenha={setMostrarSenhaPortal}
-                required
-                autoComplete="new-password"
-              />
-
-              <InputWithIcon
-                id="cadastro-whatsapp"
-                name="whatsapp"
-                label="WhatsApp"
-                icon={<Phone size={18} className="text-[#999]" />}
-                type="text"
-                placeholder="912345678"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                autoComplete="tel"
-              />
-
-              <p className="text-xs text-[#999] -mt-2">Poderá fazer mais tarde, se preferir.</p>
+              <div>
+                <label className="block text-sm text-[#777]">Usuário do Portal</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  value={usuarioPortal}
+                  onChange={(e) => setUsuarioPortal(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className="block text-sm text-[#777]">Senha do Portal</label>
+                <input
+                  type={mostrarSenhaPortal ? "text" : "password"}
+                  className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  value={senhaPortal}
+                  onChange={(e) => setSenhaPortal(e.target.value)}
+                  required
+                />
+                <div
+                  onClick={() => setMostrarSenhaPortal(!mostrarSenhaPortal)}
+                  className="absolute right-3 top-8 cursor-pointer text-gray-500"
+                  style={{top: 38}}
+                >
+                  {mostrarSenhaPortal ? <EyeOff size={18} /> : <Eye size={18} />}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-[#777]">WhatsApp</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="912345678"
+                />
+                <p className="text-xs text-[#999] -mt-2">Poderá fazer mais tarde, se preferir.</p>
+              </div>
             </>
           )}
 
@@ -245,15 +177,14 @@ const CadastroPage = () => {
 
           <button
             type="submit"
-            className="w-full bg-[#7C3AED] text-white py-2 rounded-lg font-semibold hover:bg-[#6B21A8] transition"
+            className="w-full bg-[#7C3AED] text-white py-2 rounded-lg font-semibold hover:bg-[#6B21A8]"
             disabled={carregando}
           >
             {carregando ? "Criando..." : "Criar Conta"}
           </button>
         </form>
-
         <p className="text-sm text-center text-[#777] mt-4">
-          Já tem uma conta?{' '}
+          Já tem uma conta?{" "}
           <span
             className="text-[#7C3AED] hover:underline cursor-pointer"
             onClick={() => navigate("/")}
