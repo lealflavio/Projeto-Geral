@@ -37,7 +37,8 @@ const CadastroPage = () => {
 
     setCarregando(true);
     try {
-      const response = await axios.post("http://localhost:8000/auth/register", {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await axios.post(`${apiUrl}/auth/register`, {
         nome_completo: nome,
         email,
         senha,
@@ -110,7 +111,6 @@ const CadastroPage = () => {
             <div
               onClick={() => setMostrarSenha(!mostrarSenha)}
               className="absolute right-3 top-8 cursor-pointer text-gray-500"
-              style={{top: 38}}
             >
               {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
             </div>
@@ -121,18 +121,12 @@ const CadastroPage = () => {
               type="text"
               className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
               value={whatsapp}
-              onChange={e => setWhatsapp(e.target.value.replace(/\D/g, ""))}
-              placeholder="ex: 912345678"
+              onChange={(e) => setWhatsapp(e.target.value)}
               required
-              inputMode="numeric"
-              pattern="\d*"
-              maxLength={13}
             />
           </div>
-
           {erro && <p className="text-red-500 text-sm">{erro}</p>}
           {sucesso && <p className="text-green-600 text-sm">{sucesso}</p>}
-
           <button
             type="submit"
             className="w-full bg-[#7C3AED] text-white py-2 rounded-lg font-semibold hover:bg-[#6B21A8]"
@@ -141,7 +135,6 @@ const CadastroPage = () => {
             {carregando ? "Criando..." : "Criar Conta"}
           </button>
         </form>
-        
         <p className="text-sm text-center text-[#777] mt-4">
           Já tem uma conta?{" "}
           <span
