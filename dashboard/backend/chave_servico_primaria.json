@@ -1,13 +1,1 @@
-{
-  "type": "service_account",
-  "project_id": "wondercomautomation",
-  "private_key_id": "58430753c0f7790d089fe6995326b8f45dcc661f",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDYfTrKuljFLGyR\nL5oe2AkrYgDkuMI3MPuOmy/p9ywbqEYXBY4QAQpJTM5pMSLF1f+ELL9eLoiSMfzq\nKw22s9tbcPfNm4DbYX84soephZje+2sD2tOnTdqNKQXaAirmwdfmNXanj4UEbHtD\nVYzwr8ePpmLao27F0iAC23/0+bM8FAgMvx5Ia5lkcIrSnQSVZ8AzzoO9DsPd+5El\nP4o909TRDs2Is9bt0FIR7UDIcBTlYyhkGw+o3HXJgSLc24Qslb/odNjJCO2GfOTM\nlR8Yhtu6CqAg8rJetjRGTTyc1uuUx+YArcBYdMuRsqoPWVO/nI6UhZMG+G7p+zAc\n6v6aOe3/AgMBAAECggEAOiorSZyXjSJKaRepCPByRj2mj800IS//5mi7jtjh+OxV\nKIpNiO8+nEMOkiSpew3sAM8k+2D1QJI9qYy3uobIQOExMwS8sjSXwdv1pw5F7GMQ\ndZCtnR3FwndrIw/CBw29vBRRNOPSkUW0OHsbyu7vZyEFHkka0fuKrjnbPy53gYRB\npAAWzr+OSfj6uGhZYfs9RQdd2bb+Xnf8XibduX0reLqs+ck+Q8foUOT+rds22VpV\nW6aM4DOUnhraUZLLT6QjI1UZxt/g6ZBQ+l7EpcvxtziDTzinNRVgGCFJgsg429Cr\nmZXFRm4dCba9jdG/gVaeTBGeV6wuSnPUz/MtHqhxwQKBgQD2QwUFK89QyCEL5U/L\n4xELlGdAjvCfdNZyU+POzF7YGoqPSwhfJDJqWr9yESkP83yHY1M8OZaGyaSnasgD\n+akUsX+W9GZ1Piv/ObXWjF1C/r6gz90xWyYxSRr6clwyrOMksv9gon5t7y/xLtzd\n3B31d7Ky3YXvAFuv4AeADrIDmwKBgQDhDNAoBDWCC78zxSE632ZrHED0TkPxJ5HU\nZ+8KpUoc2GPTZxox7ZVa2f61M9GX5TSxMxYYbNLy0C55ovf6/NkWk8VDSOvdc66b\nNkril8jzDx/g9qcl2/NECwRofUR38htQN3IkNwSfHsq6q+yBtR0ijYe0LXtAqM6e\nEyIcs3X/bQKBgBgtKDcDwAysOSJT1uurVScP4LsjzVe6PrtmpPzOb5lDscqzkRTW\nFuT+F8F5EdDxFI6uH6PP+4ksDrAo+Y36WrEfY+lMASsNeYBLCCESEq3bGJftEEgi\nLLO1+6IOzCJler9Fm3C/Qy5Dxy8kbKaTT5WjtLV+rgFyxY2UrufRiYR1AoGASFNb\n2mBv6dlom3SxF0CQo7+yyFEW2LvEzCSS2DMCvH52powuCPm31DjW+NksdMp+wqwO\nX88phEuPhBvx4kG8atsWvGcFFmiFJvCt5GCvfh3QOvZKBYrIhYec5Q/NH1c5m/AV\nyLm9zH2S3ac/HPhd4qrlf+xV/hPCQ18WyW6Lb4kCgYEAwoHvB8/ovfpafcB1SXlU\nku0aSJOR3hqLDD5S3LM/hZxHbFFYWJSFrf7QxkWqyQM29UnfP8WiEAXbFg7wr3KU\nY3yk4kZiOielOldFG0rAU7u7jwA9tvf1BYdzAuE1uMJxE3bzVYtJJjX1Bsq+aN8O\naTcmvQJZnpNHz4IEMCfKpPk=\n-----END PRIVATE KEY-----\n",
-  "client_email": "automacao-wondercom-servic-409@wondercomautomation.iam.gserviceaccount.com",
-  "client_id": "105754605078827806044",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/automacao-wondercom-servic-409%40wondercomautomation.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+
