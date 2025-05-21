@@ -141,16 +141,7 @@ const CadastroPage = () => {
             {carregando ? "Criando..." : "Criar Conta"}
           </button>
         </form>
-        <div className="my-4 flex flex-col items-center">
-          <span className="text-gray-400 text-sm mb-2">Ou</span>
-          {/* <GoogleLogin
-            onSuccess={credentialResponse => {
-              // Envie credentialResponse.credential ao backend
-            }}
-            onError={() => setErro("Falha ao autenticar com o Google.")}
-            useOneTap
-          /> */}
-        </div>
+        
         <p className="text-sm text-center text-[#777] mt-4">
           Já tem uma conta?{" "}
           <span
