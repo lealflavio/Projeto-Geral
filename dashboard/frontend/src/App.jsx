@@ -9,6 +9,7 @@ import MinhasWOs from "./pages/MinhasWOs";
 import Perfil from "./pages/Perfil";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoutes";
+import EsqueciSenhaPage from "./pages/EsqueciSenhaPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/cadastro" element={<CadastroPage />} />
+        <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creditos" element={<Creditos />} />
