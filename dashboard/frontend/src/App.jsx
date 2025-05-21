@@ -19,7 +19,7 @@ function App() {
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creditos" element={<Creditos />} />
-          <Route path="/work-order-allocation" element={<WorkOrderAllocation />} />
+          <Route path="/alocar-wo" element={<WorkOrderAllocation />} />
           <Route path="/simulador" element={<Simulador />} />
           <Route path="/wos" element={<MinhasWOs />} />
           <Route path="/perfil" element={<Perfil />} />
