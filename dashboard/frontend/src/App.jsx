@@ -3,6 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import CadastroPage from "./pages/CadastroPage";
 import Dashboard from "./pages/Dashboard";
 import Creditos from "./pages/Creditos";
+import WorkOrderAllocation from './pages/WorkOrderAllocation';
 import Simulador from "./pages/Simulador";
 import MinhasWOs from "./pages/MinhasWOs";
 import Perfil from "./pages/Perfil";
@@ -18,6 +19,7 @@ function App() {
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creditos" element={<Creditos />} />
+          <Route path="/work-order-allocation" element={<WorkOrderAllocation />} />
           <Route path="/simulador" element={<Simulador />} />
           <Route path="/wos" element={<MinhasWOs />} />
           <Route path="/perfil" element={<Perfil />} />
