@@ -63,7 +63,7 @@ const Sidebar = () => {
 
         {/* Conteúdo do menu */}
         <div className="flex flex-col h-full">
-          <nav className="flex-1 px-4 pt-6 space-y-2">
+          <nav className="flex-1 px-4 pt-6 space-y-2 overflow-y-auto">
             {links.map((link) => (
               <Link
                 key={link.path}
@@ -82,7 +82,7 @@ const Sidebar = () => {
           </nav>
 
           {/* Botão de sair */}
-          <div className="px-4 py-6">
+          <div className="px-4 py-4 shrink-0">
             <button
               onClick={logout}
               className="w-full bg-[#7C3AED] text-white py-2 rounded-xl font-semibold shadow hover:bg-[#6B21A8] transition"
