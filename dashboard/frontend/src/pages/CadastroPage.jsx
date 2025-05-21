@@ -21,7 +21,9 @@ const CadastroPage = () => {
   const [carregando, setCarregando] = useState(false);
 
   React.useEffect(() => {
-    nomeRef.current && nomeRef.current.focus();
+    if (nomeRef.current) {
+      nomeRef.current.focus();
+    }
   }, []);
 
   const validarCampos = () => {
@@ -139,7 +141,7 @@ const CadastroPage = () => {
             placeholder="ex: João"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            inputRef={nomeRef}
+            inputRef={nomeRef}        // SÓ O PRIMEIRO
             required
             autoComplete="name"
           />
