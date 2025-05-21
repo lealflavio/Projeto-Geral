@@ -1,10 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base # Adjusted import for Base
-from .routes import auth as auth_routes # Adjusted import for auth_routes
-from .routes import dashboard as dashboard_routes # Placeholder for dashboard routes
-# Import models to ensure tables are created by SQLAlchemy, if not already existing
-# from . import models # This line can be uncommented if you want to ensure tables are created on startup, though Base.metadata.create_all(bind=engine) is more explicit.
+from .database import engine, Base
+from .routes import auth as auth_routes
+from .routes import dashboard as dashboard_routes
 from app.routes import auth, usuarios
 
 app.include_router(auth.router)
