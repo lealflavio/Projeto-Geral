@@ -32,6 +32,25 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
 
+# --- Esqueci/resetar senha ---
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    nova_senha: str
+
+# --- Editar perfil ---
+class UserUpdate(BaseModel):
+    nome_completo: Optional[str]
+    email: Optional[EmailStr]
+    whatsapp: Optional[str]
+
+# --- Atualizar credenciais do portal ---
+class UpdatePortalCredentials(BaseModel):
+    usuario_portal: Optional[str]
+    senha_portal: Optional[str]
+
 class AddCreditsRequest(BaseModel):
     creditos: int
 
