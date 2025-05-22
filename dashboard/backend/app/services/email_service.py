@@ -24,7 +24,7 @@ Clique no link abaixo para criar uma nova senha (válido por 1 hora):
 
 Se você não solicitou, ignore este e-mail.
 
-Wondercom
+ZincoApp
 """)
 
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
