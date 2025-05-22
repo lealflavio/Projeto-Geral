@@ -16,6 +16,10 @@ class User(Base):
     creditos = Column(Integer, default=5)
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
 
+    # --- Novos campos para reset de senha ---
+    reset_token = Column(Text, nullable=True)
+    reset_token_expires = Column(DateTime(timezone=True), nullable=True)
+
     service_values = relationship("ServiceValue", back_populates="owner")
     wos = relationship("WO", back_populates="tecnico")
 
