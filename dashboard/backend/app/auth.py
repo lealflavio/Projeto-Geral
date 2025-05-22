@@ -9,6 +9,8 @@ import os
 from dotenv import load_dotenv
 from . import models, schemas, database
 
+import secrets
+
 load_dotenv()
 
 # --- Configurações de segurança ---
@@ -22,14 +24,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # --- OAuth2 ---
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-
 # --- Utilitários de senha ---
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
     return pwd_context.hash(password)
-
 
 # --- Token JWT ---
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -38,7 +38,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
 
 # --- Utilitários de usuário ---
 def get_user_by_email(db: Session, email: str):
@@ -52,7 +51,6 @@ def authenticate_user(db: Session, email: str, password: str):
     if not user or not verify_password(password, user.senha_hash):
         return False
     return user
-
 
 # --- Dependências de autenticação ---
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
@@ -77,3 +75,29 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 async def get_current_active_user(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+# --- Funções de reset de senha ---
+def generate_password_reset_token():
+    return secrets.token_urlsafe(48)
+
+def set_reset_token_for_user(db: Session, user: models.User):
+    # Gera e salva token + expiração
+    token = generate_password_reset_token()
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    user.reset_token = token
+    user.reset_token_expires = expires
+    db.commit()
+    db.refresh(user)
+    return token, expires
+
+def verify_reset_token(db: Session, token: str):
+    user = db.query(models.User).filter(models.User.reset_token == token).first()
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
+        return None
+    return user
+
+def clear_reset_token(user: models.User, db: Session):
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    db.refresh(user)
