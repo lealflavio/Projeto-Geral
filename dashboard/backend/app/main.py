@@ -24,7 +24,7 @@ app.add_middleware(
 
 app.include_router(auth_routes.router)
 app.include_router(dashboard_routes.router)
-app.include_router(usuarios_routes.router, prefix="/usuarios", tags=["usuarios"])
+app.include_router(usuarios_routes.router)  # NÃO coloque prefix ou tags aqui!
 
 @app.on_event("startup")
 def on_startup():
