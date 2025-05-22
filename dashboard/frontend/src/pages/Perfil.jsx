@@ -232,7 +232,6 @@ const Perfil = () => {
                   inputMode="text"
                   placeholder="ex: joao.silva"
                 />
-                <small className="text-muted text-xs">Formato: nome.sobrenome, só letras minúsculas</small>
               </div>
               <div className="relative">
                 <label className="block text-sm text-muted">Senha Portal</label>
