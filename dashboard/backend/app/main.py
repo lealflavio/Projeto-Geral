@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .routes import auth as auth_routes
 from .routes import dashboard as dashboard_routes
-from app.routes import auth, usuarios
+from .routes import usuarios as usuarios_routes
 
 # Instancia o app FastAPI com metadados
 app = FastAPI(
@@ -15,20 +15,19 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Configura o CORS (boas práticas: restringir em produção)
+# Configuração de CORS: só permite seu frontend em produção!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ Em produção, troque "*" pelo endereço do seu frontend ex: ["https://seu-front.netlify.app"]
+    allow_origins=["https://zincoapp.pt"],  # Permite apenas seu domínio!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Inclui os routers do sistema
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(usuarios.router, prefix="/usuarios", tags=["usuarios"])
 app.include_router(auth_routes.router)
 app.include_router(dashboard_routes.router)
+app.include_router(usuarios_routes.router, prefix="/usuarios", tags=["usuarios"])
 
 # Cria as tabelas do banco de dados (somente para desenvolvimento)
 # Em produção, use um sistema de migrations como Alembic
