@@ -5,7 +5,7 @@ import os
 def send_reset_email(dest_email: str, reset_link: str):
     EMAIL_FROM = os.getenv("EMAIL_FROM")
     SMTP_HOST = os.getenv("SMTP_HOST")
-    SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+    SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
     SMTP_USER = os.getenv("SMTP_USER")
     SMTP_PASS = os.getenv("SMTP_PASS")
 
@@ -27,7 +27,6 @@ Se você não solicitou, ignore este e-mail.
 Wondercom
 """)
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
