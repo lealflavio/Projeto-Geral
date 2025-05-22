@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { Settings, Check, X, Eye, EyeOff } from "lucide-react";
+import { Settings, Check, X, Eye, EyeOff, RefreshCw } from "lucide-react";
+
+const Toast = ({ show, onClose, message }) => {
+  if (!show) return null;
+  return (
+    <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2">
+      <div className="bg-primary text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fade-in">
+        <span>{message}</span>
+        <button onClick={onClose} className="ml-2 hover:text-background text-white">
+          <X size={18} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const Perfil = () => {
-  const navigate = useNavigate();
-
   // Estado para dados do usuário
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -18,10 +29,13 @@ const Perfil = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
   // Integração K1
-  const [integrado, setIntegrado] = useState(false);
+  const [editandoPortal, setEditandoPortal] = useState(false);
   const [usuarioPortal, setUsuarioPortal] = useState("");
   const [senhaPortal, setSenhaPortal] = useState("");
   const [mostrarSenhaPortal, setMostrarSenhaPortal] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState({ show: false, message: "" });
 
   // Carregar dados do usuário ao montar
   useEffect(() => {
@@ -35,10 +49,9 @@ const Perfil = () => {
         });
         setUsuario(data);
         setNovoWhatsapp(data.whatsapp || "");
-        setIntegrado(!!data.integrado);
         setUsuarioPortal(data.usuario_portal || "");
       } catch (error) {
-        alert("Erro ao carregar dados do usuário.");
+        setToast({ show: true, message: "Erro ao carregar dados do usuário." });
       }
       setCarregando(false);
     };
@@ -57,9 +70,9 @@ const Perfil = () => {
       );
       setUsuario((u) => ({ ...u, whatsapp: novoWhatsapp }));
       setEditandoWhatsapp(false);
-      alert("WhatsApp atualizado com sucesso!");
+      setToast({ show: true, message: "WhatsApp atualizado com sucesso!" });
     } catch (error) {
-      alert("Erro ao atualizar WhatsApp.");
+      setToast({ show: true, message: "Erro ao atualizar WhatsApp." });
     }
   };
 
@@ -76,9 +89,9 @@ const Perfil = () => {
       );
       setNovaSenha("");
       setEditandoSenha(false);
-      alert("Senha atualizada com sucesso!");
+      setToast({ show: true, message: "Senha atualizada com sucesso!" });
     } catch (error) {
-      alert("Erro ao atualizar senha.");
+      setToast({ show: true, message: "Erro ao atualizar senha." });
     }
   };
 
@@ -93,12 +106,15 @@ const Perfil = () => {
         { usuario_portal: usuarioPortal, senha_portal: senhaPortal },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setIntegrado(true);
       setUsuario((u) => ({ ...u, integrado: true, usuario_portal: usuarioPortal }));
-      alert("Integração realizada com sucesso! Você ganhou 5 créditos para processar WOs 🎉");
+      setEditandoPortal(false);
       setSenhaPortal("");
+      setToast({
+        show: true,
+        message: "Integração realizada com sucesso! Você ganhou 5 créditos para processar WOs 🎉",
+      });
     } catch (error) {
-      alert("Falha na integração");
+      setToast({ show: true, message: "Falha na integração." });
     }
   };
 
@@ -112,69 +128,17 @@ const Perfil = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-background px-4 py-8">
+      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: "" })} />
       <div className="w-full max-w-md space-y-6">
-        {/* Card Integração */}
+        {/* Card único */}
         <div className="bg-card p-6 rounded-2xl shadow-md">
-          <h2 className="text-2xl font-semibold text-text mb-2 text-center">Integração com o K1</h2>
-          <p className="text-center text-muted mb-4">
-            Ganhe <span className="text-primary font-bold">5 créditos</span> ao integrar sua conta com o portal K1.
-          </p>
-          <form onSubmit={handleIntegrar} className="space-y-3">
-            <div>
-              <label className="block text-sm text-muted">Usuário Portal</label>
-              <input
-                type="text"
-                className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
-                value={usuarioPortal}
-                onChange={(e) => setUsuarioPortal(e.target.value)}
-                required
-                autoCapitalize="none"
-                autoCorrect="off"
-                autoComplete="username"
-                spellCheck={false}
-                inputMode="text"
-              />
-            </div>
-            <div className="relative">
-              <label className="block text-sm text-muted">Senha Portal</label>
-              <input
-                type={mostrarSenhaPortal ? "text" : "password"}
-                className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
-                value={senhaPortal}
-                onChange={(e) => setSenhaPortal(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-              <div
-                onClick={() => setMostrarSenhaPortal((v) => !v)}
-                className="absolute right-3 top-8 cursor-pointer text-muted"
-                title={mostrarSenhaPortal ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {mostrarSenhaPortal ? <EyeOff size={18} /> : <Eye size={18} />}
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary/90 mt-2"
-            >
-              {integrado ? "Atualizar dados do Portal" : "Integrar agora"}
-            </button>
-            {integrado && (
-              <div className="text-xs text-muted mt-2 text-center">
-                Você já possui integração ativa e pode atualizar seus dados do portal a qualquer momento.
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Card Perfil */}
-        <div className="bg-card p-6 rounded-2xl shadow-md">
-          <h2 className="text-xl font-semibold text-text mb-4 text-center">Perfil</h2>
+          <h2 className="text-2xl font-semibold text-text mb-4 text-center">Perfil</h2>
+          {/* Dados do usuário */}
           <div className="space-y-4">
             {/* Nome */}
             <div>
               <label className="block text-sm text-muted">Nome</label>
-              <p className="font-medium text-text">{usuario.nome}</p>
+              <p className="font-medium text-text">{usuario.nome_completo || usuario.nome || "-"}</p>
             </div>
             {/* Email */}
             <div>
@@ -284,9 +248,101 @@ const Perfil = () => {
                 )}
               </div>
             </div>
+            {/* Integração K1 */}
+            <div>
+              <label className="block text-sm text-muted mb-1">Portal K1</label>
+              {!usuario.integrado && !editandoPortal && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted text-sm">
+                    Ganhe <span className="text-primary font-bold">5 créditos</span> ao integrar sua conta com o portal K1.
+                  </p>
+                  <button
+                    type="button"
+                    className="bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary/90 transition mt-2"
+                    onClick={() => setEditandoPortal(true)}
+                  >
+                    Integrar agora
+                  </button>
+                </div>
+              )}
+              {(editandoPortal || !usuario.integrado) && (
+                editandoPortal && (
+                  <form onSubmit={handleIntegrar} className="space-y-3 mt-2">
+                    <div>
+                      <label className="block text-sm text-muted">Usuário Portal</label>
+                      <input
+                        type="text"
+                        className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
+                        value={usuarioPortal}
+                        onChange={(e) => setUsuarioPortal(e.target.value)}
+                        required
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        autoComplete="username"
+                        spellCheck={false}
+                        inputMode="text"
+                      />
+                    </div>
+                    <div className="relative">
+                      <label className="block text-sm text-muted">Senha Portal</label>
+                      <input
+                        type={mostrarSenhaPortal ? "text" : "password"}
+                        className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
+                        value={senhaPortal}
+                        onChange={(e) => setSenhaPortal(e.target.value)}
+                        required
+                        autoComplete="current-password"
+                      />
+                      <div
+                        onClick={() => setMostrarSenhaPortal((v) => !v)}
+                        className="absolute right-3 top-8 cursor-pointer text-muted"
+                        title={mostrarSenhaPortal ? "Ocultar senha" : "Mostrar senha"}
+                      >
+                        {mostrarSenhaPortal ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="flex-1 bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary/90 transition"
+                      >
+                        Salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoPortal(false)}
+                        className="flex-1 bg-secondary text-muted py-2 rounded-lg font-semibold hover:bg-danger/10 transition"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )
+              )}
+              {usuario.integrado && !editandoPortal && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-medium text-text">{usuario.usuario_portal}</span>
+                  <button
+                    type="button"
+                    className="ml-2 flex items-center gap-1 px-3 py-1 bg-primary text-white rounded-full hover:bg-primary/90 transition text-sm"
+                    onClick={() => setEditandoPortal(true)}
+                  >
+                    <RefreshCw size={16} /> Atualizar dados do portal
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      {/* Animação para toast */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(-20px);}
+          to { opacity: 1; transform: translateY(0);}
+        }
+        .animate-fade-in { animation: fade-in 0.3s ease; }
+      `}</style>
     </div>
   );
 };
