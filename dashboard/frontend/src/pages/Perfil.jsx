@@ -31,6 +31,11 @@ const Toast = ({ show, message, buttonText, onButton }) => {
   );
 };
 
+// Função de validação do usuário portal no formato nome.sobrenome (minúsculas, sem acento, só letras, sempre ponto)
+function validarUsuarioPortal(valor) {
+  return /^[a-z]+\.[a-z]+$/.test(valor);
+}
+
 const Perfil = () => {
   const navigate = useNavigate();
   // Estado do usuário
@@ -132,9 +137,23 @@ const Perfil = () => {
     }
   };
 
+  // Função para tratar input do usuário portal (apenas minúsculas, ponto e letras)
+  const handleUsuarioPortalChange = (e) => {
+    const value = e.target.value.replace(/[^a-z.]/g, "");
+    setUsuarioPortal(value);
+  };
+
   // Integração com o portal K1
   const handleIntegrar = async (e) => {
     e.preventDefault();
+    if (!validarUsuarioPortal(usuarioPortal)) {
+      setToast({
+        show: true,
+        message: "O usuário do portal deve ser no formato nome.sobrenome, apenas letras minúsculas e um ponto.",
+        buttonText: "OK"
+      });
+      return;
+    }
     try {
       const token = localStorage.getItem("authToken");
       const apiUrl = import.meta.env.VITE_API_URL;
@@ -204,14 +223,16 @@ const Perfil = () => {
                   type="text"
                   className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
                   value={usuarioPortal}
-                  onChange={(e) => setUsuarioPortal(e.target.value)}
+                  onChange={handleUsuarioPortalChange}
                   required
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
                   autoCapitalize="none"
                   inputMode="text"
+                  placeholder="ex: flavio.leal"
                 />
+                <small className="text-muted text-xs">Formato: nome.sobrenome, só letras minúsculas</small>
               </div>
               <div className="relative">
                 <label className="block text-sm text-muted">Senha Portal</label>
@@ -520,14 +541,16 @@ const Perfil = () => {
                       type="text"
                       className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"
                       value={usuarioPortal}
-                      onChange={(e) => setUsuarioPortal(e.target.value)}
+                      onChange={handleUsuarioPortalChange}
                       required
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
                       autoCapitalize="none"
                       inputMode="text"
+                      placeholder="ex: flavio.leal"
                     />
+                    <small className="text-muted text-xs">Formato: nome.sobrenome, só letras minúsculas</small>
                   </div>
                   <div className="relative">
                     <label className="block text-sm text-muted">Senha Portal</label>
