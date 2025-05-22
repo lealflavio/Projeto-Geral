@@ -230,7 +230,7 @@ const Perfil = () => {
                   spellCheck={false}
                   autoCapitalize="none"
                   inputMode="text"
-                  placeholder="ex: flavio.leal"
+                  placeholder="ex: joao.silva"
                 />
                 <small className="text-muted text-xs">Formato: nome.sobrenome, só letras minúsculas</small>
               </div>
@@ -245,6 +245,7 @@ const Perfil = () => {
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
+                  placeholder="sua senha"
                 />
                 <div
                   onClick={() => setMostrarSenhaPortal((v) => !v)}
@@ -549,8 +550,7 @@ const Perfil = () => {
                       autoCapitalize="none"
                       inputMode="text"
                       placeholder="ex: flavio.leal"
-                    />
-                    <small className="text-muted text-xs">Formato: nome.sobrenome, só letras minúsculas</small>
+                    />                    
                   </div>
                   <div className="relative">
                     <label className="block text-sm text-muted">Senha Portal</label>
