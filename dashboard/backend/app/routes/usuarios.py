@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import database, models, schemas, auth
+from app.services.tecnico_setup import criar_estrutura_tecnico
+from app.services.notificacoes import enviar_notificacao_boas_vindas
 
 router = APIRouter(prefix="/usuarios", tags=["Usuários"])
 
@@ -20,12 +22,11 @@ def atualizar_perfil(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    """
-    Atualiza nome, email ou whatsapp do usuário autenticado.
-    """
+    # Atualizar campos permitidos
     if dados.nome_completo:
         current_user.nome_completo = dados.nome_completo
     if dados.email:
+        # Verifica se o novo e-mail já existe
         if auth.get_user_by_email(db, dados.email) and current_user.email != dados.email:
             raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
         current_user.email = dados.email
@@ -45,9 +46,7 @@ def integrar_portal_k1(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    """
-    Atualiza ou integra usuário com o portal K1.
-    """
+    # Atualizar apenas os campos permitidos
     if dados.usuario_portal is not None:
         current_user.usuario_portal = dados.usuario_portal
     if dados.senha_portal is not None:
