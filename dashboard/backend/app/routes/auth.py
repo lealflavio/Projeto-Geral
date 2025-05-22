@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.services.tecnico_setup import criar_estrutura_tecnico
 from .. import database, models, schemas, auth
+from app.services.email_service import send_reset_email
+import os
 
 router = APIRouter(
     prefix="/auth",
@@ -48,8 +50,6 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_d
 
 @router.post("/login", response_model=schemas.Token)
 def login_for_access_token(form_data: schemas.UserLogin, db: Session = Depends(database.get_db)):
-    print("[DEBUG] Tentando login para:", form_data.email)
-
     user = auth.get_user_by_email(db, email=form_data.email)
     if not user:
         raise HTTPException(
@@ -71,3 +71,27 @@ def login_for_access_token(form_data: schemas.UserLogin, db: Session = Depends(d
 @router.get("/me", response_model=schemas.UserResponse)
 async def read_users_me(current_user: models.User = Depends(auth.get_current_active_user)):
     return current_user
+
+# --- Esqueci minha senha ---
+@router.post("/forgot-password")
+def forgot_password(request: schemas.ForgotPasswordRequest, db: Session = Depends(database.get_db)):
+    user = auth.get_user_by_email(db, email=request.email)
+    # Sempre retorna sucesso, mesmo se o usuário não existe (para evitar enumeração)
+    if not user:
+        return {"message": "Se o e-mail existir, enviaremos instruções para recuperação."}
+
+    token, expires = auth.set_reset_token_for_user(db, user)
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    reset_link = f"{frontend_url}/resetar-senha?token={token}"
+    send_reset_email(user.email, reset_link)
+    return {"message": "Se o e-mail existir, enviaremos instruções para recuperação."}
+
+@router.post("/reset-password")
+def reset_password(request: schemas.ResetPasswordRequest, db: Session = Depends(database.get_db)):
+    user = auth.verify_reset_token(db, request.token)
+    if not user:
+        raise HTTPException(status_code=400, detail="Token inválido ou expirado")
+    user.senha_hash = auth.get_password_hash(request.nova_senha)
+    auth.clear_reset_token(user, db)
+    db.commit()
+    return {"message": "Senha alterada com sucesso."}
