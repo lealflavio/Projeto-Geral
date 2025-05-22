@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
     whatsapp: Optional[str]
     creditos: int
     criado_em: datetime
+    usuario_portal: Optional[str] = None
 
     class Config:
         from_attributes = True
