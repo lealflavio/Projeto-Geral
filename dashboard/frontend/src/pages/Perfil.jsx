@@ -149,7 +149,7 @@ const Perfil = () => {
     if (!validarUsuarioPortal(usuarioPortal)) {
       setToast({
         show: true,
-        message: "O usuário do portal deve ser no formato nome.sobrenome, apenas letras minúsculas e um ponto.",
+        message: "O usuário do portal deve ser no formato nome.apelido. Se nao for o seu caso, contacte o suporte.",
         buttonText: "OK"
       });
       return;
