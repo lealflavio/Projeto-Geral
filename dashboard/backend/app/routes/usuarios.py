@@ -50,7 +50,7 @@ def atualizar_perfil(
         current_user.whatsapp = whatsapp
         atualizou = True
     if dados.senha:
-        current_user.hashed_password = auth.get_password_hash(dados.senha)
+        current_user.senha_hash = auth.get_password_hash(dados.senha)
         atualizou = True
 
     if not atualizou:
