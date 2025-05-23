@@ -1,8 +1,42 @@
+#!/usr/bin/env python3
+"""
+Extrator de dados de PDFs de intervenção
+
+Este script extrai dados relevantes de PDFs de intervenção e os salva em formato JSON.
+Refatorado para usar caminhos relativos através do sistema centralizado de configurações.
+"""
+
 import subprocess
 import logging
 import re
 import os
 import json
+import sys
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('extrator_pdf')
+
+# Adicionar diretório raiz ao path para importação
+try:
+    # Determinar o diretório base do projeto
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, current_dir)
+except Exception as e:
+    logger.error(f"Erro ao configurar path: {str(e)}")
+
+# Importar utilitários de caminho
+try:
+    from config.path_utils import get_path, join_path, ensure_dir_exists
+    USING_PATH_UTILS = True
+except ImportError:
+    logger.warning("Utilitários de caminho não encontrados. Usando caminhos padrão.")
+    USING_PATH_UTILS = False
+    # Definir caminho padrão para compatibilidade
+    DEFAULT_EXTRACAO_DIR = "/home/flavioleal_souza/Sistema/extracao_dados"
 
 # Função de extração do valor após um rótulo específico
 def extrair_valor_apos_rotulo(texto, rotulo):
@@ -117,8 +151,13 @@ def extrair_dados_pdf_relevantes(caminho_pdf):
     dados_relevantes["dados_intervencao"] = {k: v for k, v in dados_relevantes["dados_intervencao"].items() if v is not None}
 
     # Criar diretório para salvar os arquivos se não existir
-    saida_dir = "/home/flavioleal_souza/Sistema/extracao_dados"
-    os.makedirs(saida_dir, exist_ok=True)
+    if USING_PATH_UTILS:
+        # Usar utilitários de caminho para obter o diretório de saída
+        saida_dir = join_path('extracao_dados_dir', create=True)
+    else:
+        # Fallback para caminho absoluto
+        saida_dir = DEFAULT_EXTRACAO_DIR
+        os.makedirs(saida_dir, exist_ok=True)
 
     # Salvar os dados extraídos em um arquivo JSON
     nome_pdf = os.path.basename(caminho_pdf).replace('.pdf', '')
@@ -129,3 +168,15 @@ def extrair_dados_pdf_relevantes(caminho_pdf):
     
     logging.info(f"Dados extraídos salvos em: {caminho_saida}")
     return dados_relevantes
+
+# Exemplo de uso
+if __name__ == "__main__":
+    import argparse
+    
+    # Configurar parser de argumentos
+    parser = argparse.ArgumentParser(description='Extrator de dados de PDFs de intervenção')
+    parser.add_argument('pdf', help='Caminho para o arquivo PDF')
+    args = parser.parse_args()
+    
+    # Extrair dados do PDF
+    extrair_dados_pdf_relevantes(args.pdf)
