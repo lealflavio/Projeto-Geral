@@ -1,0 +1,14 @@
+{
+  "num_pdfs": 5,
+  "tempo_original": 0.043792009353637695,
+  "tempo_por_pdf_original": 0.00875840187072754,
+  "tempo_otimizado_sequencial": 0.038712263107299805,
+  "tempo_por_pdf_otimizado_seq": 0.007742452621459961,
+  "tempo_otimizado_paralelo": 0.01925969123840332,
+  "tempo_por_pdf_otimizado_par": 0.0038519382476806642,
+  "tempo_otimizado_cache": 0.0013120174407958984,
+  "tempo_por_pdf_otimizado_cache": 0.00026240348815917967,
+  "melhoria_sequencial": 11.599710361123059,
+  "melhoria_paralela": 56.0200787251534,
+  "melhoria_cache": 97.00397981238805
+}

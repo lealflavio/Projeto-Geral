@@ -1,0 +1,10 @@
+{
+  "memoria_max_original": 74.53125,
+  "memoria_media_original": 74.53125,
+  "memoria_max_otimizado": 74.5390625,
+  "memoria_media_otimizado": 74.53580729166667,
+  "memoria_max_otimizado_cache": 74.5390625,
+  "memoria_media_otimizado_cache": 74.5390625,
+  "diferenca_max": -0.010482180293501047,
+  "diferenca_media": -0.006114605171215301
+}
