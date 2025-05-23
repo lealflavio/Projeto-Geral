@@ -1,0 +1,10 @@
+Filename: /home/ubuntu/Projeto-Geral-Melhorias/Projeto-Geral/profiling/profiling_extrator_pdf.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    77     22.3 MiB     22.3 MiB           1   @memory_profile
+    78                                         def process_pdf_with_memory_profiling(pdf_file, output_dir):
+    79                                             """Processa um único PDF com memory_profiler"""
+    80     22.3 MiB      0.0 MiB           1       return extrator.extrair_dados_pdf_relevantes(pdf_file, output_dir)
+
+
