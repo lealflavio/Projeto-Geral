@@ -1,0 +1,46 @@
+name: Projeto-Geral CI
+
+on:
+  push:
+    branches: [ main, master, desenvolvimento, melhorias-qualidade ]
+  pull_request:
+    branches: [ main, master, desenvolvimento ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov black flake8 isort
+        pip install passlib python-jose[cryptography] python-dotenv sqlalchemy fastapi email-validator
+        pip install -r requirements.txt || echo "No requirements.txt found, continuing..."
+        
+    - name: Install poppler-utils
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y poppler-utils
+        
+    - name: Run linting
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        black --check . || echo "Black formatting check failed, please run black on your code"
+        
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=. --cov-report=xml --cov-report=term
+        
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
