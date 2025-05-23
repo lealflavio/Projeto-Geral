@@ -6,16 +6,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@host/dbname")
-# For this sandbox environment, we'll connect directly as the postgres user to the wondercom database.
-# In a real production environment, a dedicated user with specific privileges should be created.
+# Configuração para ambiente de produção ou desenvolvimento
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Configuração para ambiente de testes
+# Se estamos em modo de teste ou a variável DATABASE_URL não está definida,
+# usamos SQLite em memória
+if os.getenv("TESTING") == "True" or SQLALCHEMY_DATABASE_URL is None:
+    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+    connect_args = {"check_same_thread": False}
+else:
+    connect_args = {}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -23,4 +31,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
