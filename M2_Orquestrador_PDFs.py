@@ -1,12 +1,48 @@
+#!/usr/bin/env python3
+"""
+Orquestrador de Processamento de PDFs
+
+Este script coordena o processamento de PDFs para múltiplos técnicos,
+extraindo dados e enviando notificações.
+Refatorado para usar caminhos relativos através do sistema centralizado de configurações.
+"""
+
 import os
 import json
 import shutil
 import time
 import logging
-# Suprimir logs internos excessivos do Twilio
-logging.getLogger("twilio.http_client").setLevel(logging.WARNING)
+import sys
 import concurrent.futures
 from datetime import datetime
+
+# Suprimir logs internos excessivos do Twilio
+logging.getLogger("twilio.http_client").setLevel(logging.WARNING)
+
+# Configurar logging principal
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('orquestrador_pdfs')
+
+# Adicionar diretório raiz ao path para importação
+try:
+    # Determinar o diretório base do projeto
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, current_dir)
+except Exception as e:
+    logger.error(f"Erro ao configurar path: {str(e)}")
+
+# Importar utilitários de caminho
+try:
+    from config.path_utils import get_path, join_path, ensure_dir_exists
+    USING_PATH_UTILS = True
+except ImportError:
+    logger.warning("Utilitários de caminho não encontrados. Usando caminhos padrão.")
+    USING_PATH_UTILS = False
+    # Definir caminhos padrão para compatibilidade
+    TECNICOS_DIR = "/home/flavioleal_souza/Sistema/tecnicos"
+    CONFIG_TECNICOS_JSON_PATH = "/home/flavioleal_souza/Sistema/config/tecnicos.json"
+
+# Importar módulos do projeto
 from M1_Extrator_PDF import extrair_dados_pdf_relevantes
 from M6_Notificacao_Status import (
     enviar_notificacao_boas_vindas,
@@ -16,18 +52,19 @@ from M6_Notificacao_Status import (
 )
 
 # --- Configurações ---
-TECNICOS_DIR = "/home/flavioleal_souza/Sistema/tecnicos"
-CONFIG_TECNICOS_JSON_PATH = "/home/flavioleal_souza/Sistema/config/tecnicos.json"
 NUM_THREADS = 4
-
-# --- Logger global ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Logger por técnico ---
 def configurar_logger(tecnico_nome):
     data_hoje = datetime.now().strftime("%Y-%m-%d")
-    log_path = os.path.join(TECNICOS_DIR, tecnico_nome, "logs", f"{data_hoje}.log")
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    
+    if USING_PATH_UTILS:
+        # Usar utilitários de caminho
+        log_path = join_path('tecnicos_dir', tecnico_nome, "logs", f"{data_hoje}.log", create=True)
+    else:
+        # Fallback para caminho absoluto
+        log_path = os.path.join(TECNICOS_DIR, tecnico_nome, "logs", f"{data_hoje}.log")
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
     logger = logging.getLogger(tecnico_nome)
     logger.setLevel(logging.INFO)
@@ -59,7 +96,13 @@ def processar_pdf_tecnico(pdf_path, tecnico_nome, tecnico_info):
             logger.info(f"========================= FIM DA WO {numero_wo} =========================\n")
             return False
 
-        logger.info(f"Dados extraídos salvos em: /home/flavioleal_souza/Sistema/extracao_dados/{numero_wo}_dados.json")
+        # Obter caminho de saída dos dados extraídos
+        if USING_PATH_UTILS:
+            extracao_dados_dir = get_path('extracao_dados_dir')
+        else:
+            extracao_dados_dir = "/home/flavioleal_souza/Sistema/extracao_dados"
+            
+        logger.info(f"Dados extraídos salvos em: {os.path.join(extracao_dados_dir, f'{numero_wo}_dados.json')}")
         logger.info(f"[WO {numero_wo}] Dados extraídos com sucesso. Enviando notificação...")
 
         enviar_notificacao_wo_iniciada(tecnico_info["whatsapp"], tecnico_info["nome_completo"], numero_wo, dados["dados_intervencao"])
@@ -82,13 +125,26 @@ def processar_pdf_tecnico(pdf_path, tecnico_nome, tecnico_info):
 # --- Movimentar arquivo ---
 def mover_pdf(pdf_path, tecnico_nome, sucesso):
     destino = "processados" if sucesso else "erro"
-    base_dir = os.path.join(TECNICOS_DIR, tecnico_nome, "pdfs", destino)
-    os.makedirs(base_dir, exist_ok=True)
+    
+    if USING_PATH_UTILS:
+        # Usar utilitários de caminho
+        base_dir = join_path('tecnicos_dir', tecnico_nome, "pdfs", destino, create=True)
+    else:
+        # Fallback para caminho absoluto
+        base_dir = os.path.join(TECNICOS_DIR, tecnico_nome, "pdfs", destino)
+        os.makedirs(base_dir, exist_ok=True)
+        
     shutil.move(pdf_path, os.path.join(base_dir, os.path.basename(pdf_path)))
 
 # --- Processar técnico ---
 def processar_tecnico(tecnico_nome, tecnico_info, executor):
-    pasta_novos = os.path.join(TECNICOS_DIR, tecnico_nome, "pdfs", "novos")
+    if USING_PATH_UTILS:
+        # Usar utilitários de caminho
+        pasta_novos = join_path('tecnicos_dir', tecnico_nome, "pdfs", "novos")
+    else:
+        # Fallback para caminho absoluto
+        pasta_novos = os.path.join(TECNICOS_DIR, tecnico_nome, "pdfs", "novos")
+        
     logging.info(f"Verificando PDFs na pasta: {pasta_novos}")
 
     if not os.path.exists(pasta_novos):
@@ -108,9 +164,17 @@ def processar_tecnico(tecnico_nome, tecnico_info, executor):
 
 # --- Obter técnicos ---
 def get_tecnicos():
-    if not os.path.exists(CONFIG_TECNICOS_JSON_PATH):
+    if USING_PATH_UTILS:
+        # Usar utilitários de caminho
+        config_path = join_path('config_dir', "tecnicos.json")
+    else:
+        # Fallback para caminho absoluto
+        config_path = CONFIG_TECNICOS_JSON_PATH
+        
+    if not os.path.exists(config_path):
         return {}
-    with open(CONFIG_TECNICOS_JSON_PATH, "r", encoding="utf-8") as f:
+        
+    with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 # --- Main ---
