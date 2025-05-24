@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: wondercom_db_user
+      POSTGRES_PASSWORD: staging_password
+      POSTGRES_DB: wondercom_db_staging
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wondercom_db_user -d wondercom_db_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./dashboard/backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./dashboard/backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://wondercom_db_user:staging_password@db/wondercom_db_staging
+      - SECRET_KEY=staging_secret_key
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - FRONTEND_URL=http://localhost:3000
+      - ENVIRONMENT=staging
+
+  frontend:
+    build: ./dashboard/frontend
+    command: npm run build && npm run preview
+    volumes:
+      - ./dashboard/frontend:/app
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - NODE_ENV=production
+
+volumes:
+  postgres_data_staging:
