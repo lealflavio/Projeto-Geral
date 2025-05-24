@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -46,6 +46,7 @@ class UserUpdate(BaseModel):
     nome_completo: Optional[str]
     email: Optional[EmailStr]
     whatsapp: Optional[str]
+    senha: Optional[str] = None
 
 # --- Atualizar credenciais do portal ---
 class UpdatePortalCredentials(BaseModel):
@@ -95,3 +96,21 @@ class PortalIntegrationRequest(BaseModel):
     usuario_portal: str
     senha_portal: str
     whatsapp: str
+
+# --- Schemas para sistema de créditos ---
+class CreditoLogResponse(BaseModel):
+    id: int
+    operacao: str
+    quantidade: int
+    saldo_anterior: int
+    saldo_atual: int
+    detalhes: Optional[str]
+    data: datetime
+
+    class Config:
+        from_attributes = True
+
+class CreditoVerificacaoResponse(BaseModel):
+    creditos_suficientes: bool
+    saldo_atual: int
+    mensagem: str

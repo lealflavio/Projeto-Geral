@@ -22,6 +22,7 @@ class User(Base):
 
     service_values = relationship("ServiceValue", back_populates="owner")
     wos = relationship("WO", back_populates="tecnico")
+    logs_creditos = relationship("CreditoLog", back_populates="usuario")
 
 class WO(Base):
     __tablename__ = "wos"
@@ -45,3 +46,17 @@ class ServiceValue(Base):
     tecnico_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     owner = relationship("User", back_populates="service_values")
+
+class CreditoLog(Base):
+    __tablename__ = "creditos_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    operacao = Column(String, nullable=False)  # "consumo", "adicao", "transferencia_saida", "transferencia_entrada"
+    quantidade = Column(Integer, nullable=False)
+    saldo_anterior = Column(Integer, nullable=False)
+    saldo_atual = Column(Integer, nullable=False)
+    detalhes = Column(Text, nullable=True)
+    data = Column(DateTime(timezone=True), server_default=func.now())
+
+    usuario = relationship("User", back_populates="logs_creditos")
