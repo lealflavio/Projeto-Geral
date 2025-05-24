@@ -1,97 +1,128 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field, validator
+from typing import Optional, List, Dict, Any
 from datetime import datetime
+from enum import Enum
 
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
     nome_completo: str
     email: EmailStr
-    senha: str
-    whatsapp: Optional[str] = Field(None, pattern=r'^\d{9,15}$')
+    whatsapp: Optional[str] = None
     usuario_portal: Optional[str] = None
     senha_portal: Optional[str] = None
+
+class UserCreate(UserBase):
+    senha: str
+    
+    @validator('senha')
+    def senha_must_be_strong(cls, v):
+        if len(v) < 8:
+            raise ValueError('A senha deve ter pelo menos 8 caracteres')
+        if not any(c.isupper() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra maiúscula')
+        if not any(c.islower() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra minúscula')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('A senha deve conter pelo menos um número')
+        if not any(not c.isalnum() for c in v):
+            raise ValueError('A senha deve conter pelo menos um caractere especial')
+        return v
+
+class UserUpdate(BaseModel):
+    nome_completo: Optional[str] = None
+    email: Optional[EmailStr] = None
+    whatsapp: Optional[str] = None
+    usuario_portal: Optional[str] = None
+    senha_portal: Optional[str] = None
+    role: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    nome_completo: str
+    email: str
+    whatsapp: Optional[str] = None
+    usuario_portal: Optional[str] = None
+    creditos: int
+    role: str
+    is_disabled: bool
+    criado_em: datetime
+    last_login: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
 
 class UserLogin(BaseModel):
     email: EmailStr
     senha: str
 
-class UserResponse(BaseModel):
-    id: int
-    nome_completo: str
-    email: EmailStr
-    whatsapp: Optional[str]
-    creditos: int
-    criado_em: datetime
-    usuario_portal: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
 class Token(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str
+    expires_in: Optional[int] = None
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+    permissions: Optional[List[str]] = None
 
-# --- Esqueci/resetar senha ---
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 class ResetPasswordRequest(BaseModel):
     token: str
     nova_senha: str
+    
+    @validator('nova_senha')
+    def senha_must_be_strong(cls, v):
+        if len(v) < 8:
+            raise ValueError('A senha deve ter pelo menos 8 caracteres')
+        if not any(c.isupper() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra maiúscula')
+        if not any(c.islower() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra minúscula')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('A senha deve conter pelo menos um número')
+        if not any(not c.isalnum() for c in v):
+            raise ValueError('A senha deve conter pelo menos um caractere especial')
+        return v
 
-# --- Editar perfil ---
-class UserUpdate(BaseModel):
-    nome_completo: Optional[str]
-    email: Optional[EmailStr]
-    whatsapp: Optional[str]
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
-# --- Atualizar credenciais do portal ---
-class UpdatePortalCredentials(BaseModel):
-    usuario_portal: Optional[str]
-    senha_portal: Optional[str]
+class ChangePasswordRequest(BaseModel):
+    senha_atual: str
+    nova_senha: str
+    
+    @validator('nova_senha')
+    def senha_must_be_strong(cls, v):
+        if len(v) < 8:
+            raise ValueError('A senha deve ter pelo menos 8 caracteres')
+        if not any(c.isupper() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra maiúscula')
+        if not any(c.islower() for c in v):
+            raise ValueError('A senha deve conter pelo menos uma letra minúscula')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('A senha deve conter pelo menos um número')
+        if not any(not c.isalnum() for c in v):
+            raise ValueError('A senha deve conter pelo menos um caractere especial')
+        return v
 
-class AddCreditsRequest(BaseModel):
-    creditos: int
+class SecurityAuditLogCreate(BaseModel):
+    user_id: Optional[int] = None
+    action: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    details: Optional[str] = None
+    severity: str = "info"
 
-class TransferCreditsRequest(BaseModel):
-    email_destino: EmailStr
-    creditos: int
-
-class WOCreate(BaseModel):
-    numero_wo: str
-    status: str
-    tipo_servico: str
-    causa_erro: Optional[str] = None
-
-class WOResponse(BaseModel):
+class SecurityAuditLogResponse(BaseModel):
     id: int
-    numero_wo: str
-    tecnico_id: int
-    status: str
-    tipo_servico: str
-    data: datetime
-    causa_erro: Optional[str] = None
+    timestamp: datetime
+    user_id: Optional[int] = None
+    action: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    details: Optional[str] = None
+    severity: str
 
     class Config:
-        from_attributes = True
-
-class ServiceValueCreate(BaseModel):
-    tipo_servico: str
-    valor: float
-
-class ServiceValueResponse(BaseModel):
-    id: int
-    tipo_servico: str
-    valor: float
-    tecnico_id: int
-
-    class Config:
-        from_attributes = True
-
-# Requisição para integração com o portal
-class PortalIntegrationRequest(BaseModel):
-    usuario_portal: str
-    senha_portal: str
-    whatsapp: str
+        orm_mode = True
