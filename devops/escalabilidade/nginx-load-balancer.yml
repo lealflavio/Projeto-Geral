@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    worker_processes auto;
+    events {
+      worker_connections 1024;
+    }
+    http {
+      upstream backend_servers {
+        least_conn;
+        server backend1:8000;
+        server backend2:8000;
+        server backend3:8000;
+      }
+      
+      server {
+        listen 80;
+        
+        location / {
+          proxy_pass http://backend_servers;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # Configuração de cache
+          proxy_cache_bypass $http_pragma;
+          proxy_cache_revalidate on;
+          proxy_cache_min_uses 3;
+          proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+          proxy_cache_lock on;
+        }
+        
+        # Servir conteúdo estático diretamente
+        location /static/ {
+          alias /var/www/static/;
+          expires 1d;
+          add_header Cache-Control "public";
+        }
+        
+        # Configuração de rate limiting
+        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+        
+        location /api/ {
+          limit_req zone=api_limit burst=20 nodelay;
+          proxy_pass http://backend_servers;
+        }
+      }
+    }
