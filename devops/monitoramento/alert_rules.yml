@@ -1,0 +1,56 @@
+groups:
+- name: wondercom_alerts
+  rules:
+  - alert: HighCPULoad
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Alta carga de CPU (instância {{ $labels.instance }})"
+      description: "Carga de CPU acima de 80%\n  VALOR = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Alto uso de memória (instância {{ $labels.instance }})"
+      description: "Uso de memória acima de 85%\n  VALOR = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - alert: HighDiskUsage
+    expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Alto uso de disco (instância {{ $labels.instance }})"
+      description: "Uso de disco acima de 85%\n  VALOR = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - alert: APIHighResponseTime
+    expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)) > 1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "API com tempo de resposta alto (serviço {{ $labels.service }})"
+      description: "95º percentil da duração de requisição HTTP acima de 1s\n  VALOR = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - alert: APIHighErrorRate
+    expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service) > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "API com alta taxa de erro (serviço {{ $labels.service }})"
+      description: "Taxa de erro acima de 5%\n  VALOR = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - alert: PDFProcessingQueueGrowing
+    expr: wondercom_pdf_queue_size > 50
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Fila de processamento de PDF está crescendo"
+      description: "Fila de processamento de PDF tem mais de 50 itens por mais de 15 minutos\n  VALOR = {{ $value }}"
