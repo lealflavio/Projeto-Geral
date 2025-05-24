@@ -2,3 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Otimizações para dispositivos móveis */
+.mobile-device button,
+.mobile-device a,
+.mobile-device input[type="checkbox"],
+.mobile-device input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.touch-target-optimize {
+  padding: 0.5rem !important;
+}
+
+/* Melhorias de acessibilidade para foco */
+:focus {
+  outline: 2px solid #7C3AED;
+  outline-offset: 2px;
+}
+
+/* Melhorias para visualização em dispositivos móveis */
+@media (max-width: 640px) {
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Aumentar tamanho de fonte para melhor legibilidade em telas pequenas */
+  body {
+    font-size: 16px;
+  }
+  
+  /* Ajustar espaçamento para telas pequenas */
+  .p-4 {
+    padding: 1rem;
+  }
+  
+  /* Melhorar visualização de modais em telas pequenas */
+  .modal-mobile {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+}
+
+/* Melhorias para tablets */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Ajustes específicos para tablets */
+  .tablet-optimize {
+    padding: 1.5rem;
+  }
+}
+
+/* Animações suaves para transições */
+.transition {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Melhorias para impressão */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    color: #000;
+    background-color: #fff;
+  }
+}
