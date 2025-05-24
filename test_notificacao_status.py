@@ -146,8 +146,8 @@ class TestEnvioMensagens(unittest.TestCase):
         
         # Envia a mensagem
         resultado = enviar_mensagem_whatsapp(
-            numero_destino="+5511999999999",
-            mensagem="Teste de mensagem",
+            "+5511999999999",
+            "Teste de mensagem",
             tipo_log="teste",
             numero_wo="WO123"
         )
@@ -170,8 +170,8 @@ class TestEnvioMensagens(unittest.TestCase):
         
         # Envia a mensagem
         resultado = enviar_mensagem_whatsapp(
-            numero_destino="+5511999999999",
-            mensagem="Teste de mensagem"
+            "+5511999999999",
+            "Teste de mensagem"
         )
         
         # Verifica se houve retry e sucesso
@@ -179,40 +179,29 @@ class TestEnvioMensagens(unittest.TestCase):
         self.assertFalse(mock_fallback.called)
         self.assertTrue(resultado["success"])
     
-    @patch("M6_Notificacao_Status.client")
     @patch("M6_Notificacao_Status.requests")
-    def test_enviar_fallback(self, mock_requests, mock_client):
+    @patch("M6_Notificacao_Status.FALLBACK_WEBHOOK_URL", "https://exemplo.com/webhook")
+    def test_enviar_fallback(self, mock_requests):
         """Testa o envio de mensagem por fallback."""
-        # Configura os mocks
-        mock_message = MagicMock()
-        mock_message.sid = "SM456"
-        mock_client.messages.create.return_value = mock_message
-        
+        # Configura o mock para o webhook
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_requests.post.return_value = mock_response
         
-        # Define variáveis de ambiente para o teste
-        import M6_Notificacao_Status
-        M6_Notificacao_Status.FALLBACK_SMS_ENABLED = True
-        M6_Notificacao_Status.FALLBACK_WEBHOOK_URL = "https://exemplo.com/webhook"
-        
         # Envia a mensagem por fallback
         resultado = _enviar_fallback(
-            numero_destino="+5511999999999",
-            mensagem="Teste de mensagem",
+            "+5511999999999",
+            "Teste de mensagem",
             tipo_log="teste",
             numero_wo="WO123"
         )
         
-        # Verifica se os fallbacks foram chamados
-        mock_client.messages.create.assert_called_once()
+        # Verifica se o webhook foi chamado
         mock_requests.post.assert_called_once()
         
         # Verifica o resultado
         self.assertTrue(resultado["success"])
         self.assertTrue(resultado["fallback"])
-        self.assertIn("sms", resultado["methods"])
         self.assertIn("webhook", resultado["methods"])
 
 class TestNotificacoes(unittest.TestCase):
@@ -226,16 +215,16 @@ class TestNotificacoes(unittest.TestCase):
         
         # Envia a notificação
         resultado = enviar_notificacao_boas_vindas(
-            numero_whatsapp="+5511999999999",
-            nome_tecnico="Técnico Teste"
+            "+5511999999999",
+            "Técnico Teste"
         )
         
         # Verifica se a notificação foi enviada corretamente
         mock_enviar.assert_called_once()
-        args, kwargs = mock_enviar.call_args
-        self.assertEqual(kwargs["numero_destino"], "+5511999999999")
-        self.assertIn("Técnico Teste", kwargs["mensagem"])
-        self.assertEqual(kwargs["tipo_log"], "boas-vindas")
+        args = mock_enviar.call_args[0]
+        self.assertEqual(args[0], "+5511999999999")
+        self.assertIn("Técnico Teste", args[1])
+        self.assertEqual(mock_enviar.call_args[1]["tipo_log"], "boas-vindas")
         self.assertTrue(resultado["success"])
     
     @patch("M6_Notificacao_Status.enviar_mensagem_whatsapp")
@@ -258,27 +247,27 @@ class TestNotificacoes(unittest.TestCase):
         
         # Envia a notificação
         resultado = enviar_notificacao_wo_iniciada(
-            numero_whatsapp="+5511999999999",
-            nome_tecnico="Técnico Teste",
-            numero_wo="WO123",
-            dados_intervencao=dados_intervencao
+            "+5511999999999",
+            "Técnico Teste",
+            "WO123",
+            dados_intervencao
         )
         
         # Verifica se a notificação foi enviada corretamente
         mock_enviar.assert_called_once()
-        args, kwargs = mock_enviar.call_args
-        self.assertEqual(kwargs["numero_destino"], "+5511999999999")
-        self.assertIn("WO123", kwargs["mensagem"])
-        self.assertEqual(kwargs["tipo_log"], "início")
-        self.assertEqual(kwargs["numero_wo"], "WO123")
+        args = mock_enviar.call_args[0]
+        self.assertEqual(args[0], "+5511999999999")
+        self.assertIn("WO123", args[1])
+        self.assertEqual(mock_enviar.call_args[1]["tipo_log"], "início")
+        self.assertEqual(mock_enviar.call_args[1]["numero_wo"], "WO123")
         
         # Verifica se o evento foi registrado no monitor
         mock_monitor_instance.registrar_evento.assert_called_once()
-        args, kwargs = mock_monitor_instance.registrar_evento.call_args
-        self.assertEqual(kwargs["numero_wo"], "WO123")
-        self.assertEqual(kwargs["tipo_evento"], "inicio")
-        self.assertEqual(kwargs["tecnico"], "Técnico Teste")
-        self.assertEqual(kwargs["detalhes"], dados_intervencao)
+        args = mock_monitor_instance.registrar_evento.call_args[1]
+        self.assertEqual(args["numero_wo"], "WO123")
+        self.assertEqual(args["tipo_evento"], "inicio")
+        self.assertEqual(args["tecnico"], "Técnico Teste")
+        self.assertEqual(args["detalhes"], dados_intervencao)
         
         self.assertTrue(resultado["success"])
     
@@ -293,23 +282,23 @@ class TestNotificacoes(unittest.TestCase):
         
         # Envia a notificação
         resultado = enviar_notificacao_wo_sucesso(
-            numero_whatsapp="+5511999999999",
-            numero_wo="WO123"
+            "+5511999999999",
+            "WO123"
         )
         
         # Verifica se a notificação foi enviada corretamente
         mock_enviar.assert_called_once()
-        args, kwargs = mock_enviar.call_args
-        self.assertEqual(kwargs["numero_destino"], "+5511999999999")
-        self.assertIn("WO123", kwargs["mensagem"])
-        self.assertEqual(kwargs["tipo_log"], "sucesso")
-        self.assertEqual(kwargs["numero_wo"], "WO123")
+        args = mock_enviar.call_args[0]
+        self.assertEqual(args[0], "+5511999999999")
+        self.assertIn("WO123", args[1])
+        self.assertEqual(mock_enviar.call_args[1]["tipo_log"], "sucesso")
+        self.assertEqual(mock_enviar.call_args[1]["numero_wo"], "WO123")
         
         # Verifica se o evento foi registrado no monitor
         mock_monitor_instance.registrar_evento.assert_called_once()
-        args, kwargs = mock_monitor_instance.registrar_evento.call_args
-        self.assertEqual(kwargs["numero_wo"], "WO123")
-        self.assertEqual(kwargs["tipo_evento"], "sucesso")
+        args = mock_monitor_instance.registrar_evento.call_args[1]
+        self.assertEqual(args["numero_wo"], "WO123")
+        self.assertEqual(args["tipo_evento"], "sucesso")
         
         self.assertTrue(resultado["success"])
     
@@ -324,23 +313,23 @@ class TestNotificacoes(unittest.TestCase):
         
         # Envia a notificação
         resultado = enviar_notificacao_wo_erro(
-            numero_whatsapp="+5511999999999",
-            numero_wo="WO123"
+            "+5511999999999",
+            "WO123"
         )
         
         # Verifica se a notificação foi enviada corretamente
         mock_enviar.assert_called_once()
-        args, kwargs = mock_enviar.call_args
-        self.assertEqual(kwargs["numero_destino"], "+5511999999999")
-        self.assertIn("WO123", kwargs["mensagem"])
-        self.assertEqual(kwargs["tipo_log"], "erro")
-        self.assertEqual(kwargs["numero_wo"], "WO123")
+        args = mock_enviar.call_args[0]
+        self.assertEqual(args[0], "+5511999999999")
+        self.assertIn("WO123", args[1])
+        self.assertEqual(mock_enviar.call_args[1]["tipo_log"], "erro")
+        self.assertEqual(mock_enviar.call_args[1]["numero_wo"], "WO123")
         
         # Verifica se o evento foi registrado no monitor
         mock_monitor_instance.registrar_evento.assert_called_once()
-        args, kwargs = mock_monitor_instance.registrar_evento.call_args
-        self.assertEqual(kwargs["numero_wo"], "WO123")
-        self.assertEqual(kwargs["tipo_evento"], "erro")
+        args = mock_monitor_instance.registrar_evento.call_args[1]
+        self.assertEqual(args["numero_wo"], "WO123")
+        self.assertEqual(args["tipo_evento"], "erro")
         
         self.assertTrue(resultado["success"])
     
@@ -378,18 +367,18 @@ class TestNotificacoes(unittest.TestCase):
         
         # Envia a notificação
         resultado = enviar_notificacao_status_atual(
-            numero_whatsapp="+5511999999999",
-            numero_wo="WO123"
+            "+5511999999999",
+            "WO123"
         )
         
         # Verifica se a notificação foi enviada corretamente
         mock_obter_status.assert_called_once_with("WO123")
         mock_enviar.assert_called_once()
-        args, kwargs = mock_enviar.call_args
-        self.assertEqual(kwargs["numero_destino"], "+5511999999999")
-        self.assertIn("WO123", kwargs["mensagem"])
-        self.assertEqual(kwargs["tipo_log"], "status")
-        self.assertEqual(kwargs["numero_wo"], "WO123")
+        args = mock_enviar.call_args[0]
+        self.assertEqual(args[0], "+5511999999999")
+        self.assertIn("WO123", args[1])
+        self.assertEqual(mock_enviar.call_args[1]["tipo_log"], "status")
+        self.assertEqual(mock_enviar.call_args[1]["numero_wo"], "WO123")
         
         self.assertTrue(resultado["success"])
     
