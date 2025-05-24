@@ -1,0 +1,63 @@
+name: Rollback Strategy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão para rollback'
+        required: true
+      service:
+        description: 'Serviço para rollback (backend, frontend, ou ambos)'
+        required: true
+        default: 'ambos'
+
+jobs:
+  rollback-backend:
+    if: ${{ github.event.inputs.service == 'backend' || github.event.inputs.service == 'ambos' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout versão específica
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.version }}
+          
+      - name: Deploy para Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          echo "Realizando rollback do backend para versão ${{ github.event.inputs.version }}"
+          curl -X POST https://api.render.com/v1/services/srv-${{ secrets.RENDER_SERVICE_ID }}/deploys \
+            -H "Authorization: Bearer $RENDER_API_KEY"
+            
+      - name: Notificar rollback
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "Backend Rollback"
+          SLACK_MESSAGE: "Backend com rollback para versão ${{ github.event.inputs.version }}"
+          SLACK_COLOR: warning
+
+  rollback-frontend:
+    if: ${{ github.event.inputs.service == 'frontend' || github.event.inputs.service == 'ambos' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout versão específica
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.version }}
+          
+      - name: Deploy para Netlify
+        uses: netlify/actions/cli@master
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        with:
+          args: deploy --dir=dashboard/frontend/dist --prod
+          
+      - name: Notificar rollback
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "Frontend Rollback"
+          SLACK_MESSAGE: "Frontend com rollback para versão ${{ github.event.inputs.version }}"
+          SLACK_COLOR: warning

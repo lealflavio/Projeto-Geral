@@ -1,0 +1,66 @@
+name: Quality Check
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'dashboard/backend/**'
+      - 'dashboard/frontend/**'
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+          pip install -r dashboard/backend/requirements.txt
+          
+      - name: Check Python code formatting
+        run: |
+          black --check dashboard/backend
+          isort --check-only dashboard/backend
+          
+      - name: Lint Python code
+        run: |
+          flake8 dashboard/backend
+          
+      - name: Type check Python code
+        run: |
+          mypy dashboard/backend
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          
+      - name: Install Node.js dependencies
+        run: |
+          cd dashboard/frontend
+          npm install
+          
+      - name: Check JavaScript/TypeScript code formatting
+        run: |
+          cd dashboard/frontend
+          npm run format:check
+          
+      - name: Lint JavaScript/TypeScript code
+        run: |
+          cd dashboard/frontend
+          npm run lint
+          
+      - name: Run security audit
+        run: |
+          cd dashboard/frontend
+          npm audit
+          cd ../backend
+          pip install safety
+          safety check
