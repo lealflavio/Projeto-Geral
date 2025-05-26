@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     creditos: int
     criado_em: datetime
     usuario_portal: Optional[str] = None
+    senha_portal: Optional[str] = None  # <-- ADICIONEI ESTA LINHA
 
     class Config:
         from_attributes = True
