@@ -1,50 +1,77 @@
-import React, { useState } from 'react';
-import { Search, MapPin, Share2, Download, Clipboard, ArrowRight } from 'lucide-react';
+import React, { useState } from "react";
+import { Search, MapPin, Share2, Download, Clipboard, ArrowRight } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
 
 const WorkOrderAllocation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [showMap, setShowMap] = useState(false);
-  
-  // Dados simulados para demonstração
-  const mockWOData = {
-    numero: '12350',
-    cliente: 'Maria Oliveira',
-    morada: 'Rua das Flores, 123, Lisboa',
-    coordenadas: { lat: 38.7223, lng: -9.1393 },
-    corFibra: 'Azul',
-    tipoServico: 'Instalação',
-    dataAgendamento: '26/05/2025',
-    horario: '14:00 - 16:00',
-    observacoes: 'Cliente solicitou instalação no segundo andar, apartamento 201. Prédio com porteiro.'
-  };
-  
-  const handleSearch = () => {
-    if (!searchTerm.trim()) return;
-    
+
+  // Recupera usuário do perfil salvo localmente (ajuste se usar Context ou Redux)
+  const usuario = JSON.parse(localStorage.getItem("usuario")) || {};
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      alert("Informe o número da WO.");
+      return;
+    }
+    if (!usuario.usuario_portal || !usuario.senha_portal) {
+      alert("Credenciais do portal Wondercom não cadastradas. Cadastre no Perfil antes de usar esta função.");
+      return;
+    }
+
     setIsSearching(true);
-    
-    // Simulando uma busca com delay
-    setTimeout(() => {
-      setSearchResult(mockWOData);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/wondercom/allocate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_order_id: searchTerm,
+          credentials: {
+            username: usuario.usuario_portal,
+            password: usuario.senha_portal
+          }
+        })
+      });
+      const data = await response.json();
+      if (data.status === 'success' && data.data) {
+        setSearchResult({
+          numero: searchTerm,
+          cliente: data.data.descricao || "N/A",
+          morada: data.data.endereco || "N/A",
+          coordenadas: {
+            lat: data.data.latitude || 0,
+            lng: data.data.longitude || 0
+          },
+          corFibra: data.data.cor_fibra || "N/A",
+          tipoServico: data.data.tipo_servico || "N/A",
+          dataAgendamento: data.data.data_agendamento || "N/A",
+          horario: data.data.horario || "N/A",
+          observacoes: data.data.estado || data.data.observacoes || "",
+        });
+      } else {
+        alert('Erro ao alocar WO: ' + (data.error || data.message || 'Erro desconhecido'));
+        setSearchResult(null);
+      }
+    } catch (error) {
+      alert("Erro: " + error.message);
+      setSearchResult(null);
+    } finally {
       setIsSearching(false);
-    }, 1500);
+    }
   };
-  
+
   const handleCopyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
-      .then(() => {
-        alert('Informação copiada para a área de transferência!');
-      })
-      .catch(err => {
-        console.error('Erro ao copiar: ', err);
-      });
+      .then(() => alert('Informação copiada para a área de transferência!'))
+      .catch(err => console.error('Erro ao copiar: ', err));
   };
-  
+
   const handleShare = () => {
     if (!searchResult) return;
-    
     const shareText = `
       WO: ${searchResult.numero}
       Cliente: ${searchResult.cliente}
@@ -54,24 +81,19 @@ const WorkOrderAllocation = () => {
       Data: ${searchResult.dataAgendamento}
       Horário: ${searchResult.horario}
     `;
-    
     if (navigator.share) {
       navigator.share({
         title: `WO #${searchResult.numero}`,
         text: shareText,
-      })
-      .catch(err => {
-        console.error('Erro ao compartilhar: ', err);
-      });
+      }).catch(err => console.error('Erro ao compartilhar: ', err));
     } else {
       handleCopyToClipboard(shareText);
     }
   };
-  
+
   return (
     <div className="p-4 md:p-6">
       <h1 className="text-xl font-semibold text-[#333] mb-4">Alocação de Work Order</h1>
-      
       {/* Formulário de busca */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-3">
@@ -79,21 +101,18 @@ const WorkOrderAllocation = () => {
             <label htmlFor="wo-search" className="block text-sm text-[#555] mb-2">
               Número da Work Order
             </label>
-            <div className="relative">
-              <input 
-                id="wo-search"
-                type="text" 
-                placeholder="Ex: 12345" 
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-[#333]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Search size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#777]" />
-            </div>
+            <input
+              id="wo-search"
+              type="text"
+              placeholder="Ex: 12345678"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-[#333]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+            />
           </div>
           <div className="md:self-end">
-            <button 
+            <button
               className="w-full md:w-auto bg-[#7C3AED] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#6B21A8] transition flex items-center justify-center gap-2"
               onClick={handleSearch}
               disabled={isSearching}
@@ -116,7 +135,6 @@ const WorkOrderAllocation = () => {
           </div>
         </div>
       </div>
-      
       {/* Resultado da busca */}
       {searchResult && (
         <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -127,14 +145,14 @@ const WorkOrderAllocation = () => {
               <p className="text-sm text-purple-200">{searchResult.tipoServico}</p>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 className="p-2 rounded-full hover:bg-purple-700 transition"
                 onClick={handleShare}
                 title="Compartilhar"
               >
                 <Share2 size={20} />
               </button>
-              <button 
+              <button
                 className="p-2 rounded-full hover:bg-purple-700 transition"
                 onClick={() => alert('Download do PDF iniciado')}
                 title="Baixar PDF"
@@ -143,7 +161,6 @@ const WorkOrderAllocation = () => {
               </button>
             </div>
           </div>
-          
           {/* Conteúdo */}
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -153,12 +170,11 @@ const WorkOrderAllocation = () => {
                   <h3 className="text-sm text-[#777] mb-1">Cliente</h3>
                   <p className="text-[#333] font-medium">{searchResult.cliente}</p>
                 </div>
-                
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Morada</h3>
                   <div className="flex items-start gap-2">
                     <p className="text-[#333] flex-1">{searchResult.morada}</p>
-                    <button 
+                    <button
                       className="text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition"
                       onClick={() => handleCopyToClipboard(searchResult.morada)}
                       title="Copiar morada"
@@ -167,14 +183,13 @@ const WorkOrderAllocation = () => {
                     </button>
                   </div>
                 </div>
-                
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Coordenadas</h3>
                   <div className="flex items-center gap-2">
                     <p className="text-[#333]">
                       {searchResult.coordenadas.lat}, {searchResult.coordenadas.lng}
                     </p>
-                    <button 
+                    <button
                       className="text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition"
                       onClick={() => handleCopyToClipboard(`${searchResult.coordenadas.lat}, ${searchResult.coordenadas.lng}`)}
                       title="Copiar coordenadas"
@@ -183,7 +198,6 @@ const WorkOrderAllocation = () => {
                     </button>
                   </div>
                 </div>
-                
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Cor da Fibra</h3>
                   <div className="flex items-center gap-2">
@@ -192,19 +206,16 @@ const WorkOrderAllocation = () => {
                   </div>
                 </div>
               </div>
-              
               {/* Coluna 2 */}
               <div>
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Data de Agendamento</h3>
                   <p className="text-[#333]">{searchResult.dataAgendamento}</p>
                 </div>
-                
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Horário</h3>
                   <p className="text-[#333]">{searchResult.horario}</p>
                 </div>
-                
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Observações</h3>
                   <p className="text-[#333] p-3 bg-gray-50 rounded-lg text-sm">
@@ -213,10 +224,9 @@ const WorkOrderAllocation = () => {
                 </div>
               </div>
             </div>
-            
             {/* Mapa */}
             <div className="mt-4">
-              <button 
+              <button
                 className="flex items-center gap-2 text-[#7C3AED] hover:underline"
                 onClick={() => setShowMap(!showMap)}
               >
@@ -224,7 +234,6 @@ const WorkOrderAllocation = () => {
                 <span>{showMap ? 'Ocultar mapa' : 'Ver no mapa'}</span>
                 <ArrowRight size={16} className={`transition-transform ${showMap ? 'rotate-90' : ''}`} />
               </button>
-              
               {showMap && (
                 <div className="mt-4 bg-gray-100 rounded-lg p-2 h-64 flex items-center justify-center">
                   <div className="text-center">
@@ -233,7 +242,7 @@ const WorkOrderAllocation = () => {
                       Mapa interativo seria exibido aqui com as coordenadas:<br />
                       <span className="font-medium">{searchResult.coordenadas.lat}, {searchResult.coordenadas.lng}</span>
                     </p>
-                    <button 
+                    <button
                       className="mt-2 text-sm text-[#7C3AED] hover:underline"
                       onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${searchResult.coordenadas.lat},${searchResult.coordenadas.lng}`, '_blank')}
                     >
@@ -243,16 +252,15 @@ const WorkOrderAllocation = () => {
                 </div>
               )}
             </div>
-            
             {/* Botões de ação */}
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button 
+              <button
                 className="flex-1 bg-[#7C3AED] text-white py-2 rounded-lg font-medium hover:bg-[#6B21A8] transition"
                 onClick={() => alert('Alocando WO para processamento...')}
               >
                 Alocar para Processamento
               </button>
-              <button 
+              <button
                 className="flex-1 border border-gray-200 py-2 rounded-lg text-[#555] hover:bg-gray-50 transition"
                 onClick={() => setSearchResult(null)}
               >
