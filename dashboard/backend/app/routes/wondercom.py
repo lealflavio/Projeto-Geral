@@ -1,198 +1,168 @@
 """
-Rotas para integração com o Portal Wondercom.
+Endpoints para integração com o Wondercom.
+Este módulo implementa as rotas para alocação de WO e outras funcionalidades.
 """
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from app.services.portal_automation.wondercom_client import WondercomClient
-from ..auth import get_current_active_user
-from .. import models
-from sqlalchemy.orm import Session
-from ..database import get_db
 
-router = APIRouter(
-    prefix="/api/wondercom",
-    tags=["wondercom"],
-    responses={404: {"description": "Not found"}},
-)
+from flask import Blueprint, request, jsonify
+import logging
+import re
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from ..models import db, User, WorkOrder
+from ..services.vm_api import VMApiClient
+from ..services.notification_service import NotificationService
 
-# Configurações do Portal Wondercom
-CHROME_DRIVER_PATH = "/home/flavioleal_souza/Downloads/chromedriver"
-PORTAL_URL = "https://portal.wondercom.pt/group/guest/intervencoes"
+# Configurar logging
+logger = logging.getLogger(__name__)
 
-# Modelos de dados
-class WorkOrderRequest(BaseModel):
-    work_order_id: str
+# Criar blueprint
+wondercom_bp = Blueprint('wondercom', __name__)
 
-class WorkOrderResponse(BaseModel):
-    success: bool
-    message: str
-    dados: Optional[Dict[str, Any]] = None
-
-# Cache simples para armazenar resultados de WOs consultadas
-wo_cache = {}
-
-@router.post("/allocate", response_model=WorkOrderResponse)
-async def allocate_work_order(
-    request: WorkOrderRequest,
-    background_tasks: BackgroundTasks,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
+@wondercom_bp.route('/api/wondercom/allocate', methods=['POST'])
+@jwt_required()
+def allocate_work_order():
     """
-    Aloca uma ordem de trabalho no Portal Wondercom usando as credenciais do usuário autenticado.
+    Endpoint para alocação de ordem de trabalho.
     """
-    work_order_id = request.work_order_id
-
-    print(f"Tentando alocar WO: {work_order_id}")  # Log adicional
-
-    # Verifica se a WO já está em cache
-    if work_order_id in wo_cache:
-        print(f"WO {work_order_id} encontrada em cache.")  # Log adicional
-        return WorkOrderResponse(
-            success=True,
-            message=f"WO {work_order_id} encontrada em cache.",
-            dados=wo_cache[work_order_id]
-        )
-
-    # Busca credenciais do usuário autenticado
-    wondercom_username = getattr(current_user, "usuario_portal", None)
-    wondercom_password = getattr(current_user, "senha_portal", None)
-    if not wondercom_username or not wondercom_password:
-        raise HTTPException(status_code=400, detail="Credenciais do Portal Wondercom não cadastradas para este usuário.")
-
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({"status": "error", "message": "Usuário não encontrado"}), 404
+    
+    # Verificar se o usuário tem integração configurada
+    if not user.usuario_portal or not user.senha_portal:
+        return jsonify({"status": "error", "message": "Integração com portal não configurada"}), 400
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"status": "error", "message": "Dados ausentes"}), 400
+    
+    work_order_id = data.get('work_order_id')
+    
+    if not work_order_id:
+        return jsonify({"status": "error", "message": "ID da ordem de trabalho ausente"}), 400
+    
+    # Validar formato do work_order_id (8 dígitos numéricos)
+    if not re.match(r'^\d{8}$', work_order_id):
+        return jsonify({"status": "error", "message": "ID da ordem de trabalho deve ter 8 dígitos numéricos"}), 400
+    
+    # Preparar credenciais
+    credentials = {
+        "username": user.usuario_portal,
+        "password": user.senha_portal
+    }
+    
     try:
-        print("Inicializando cliente Wondercom com credenciais do usuário")  # Log adicional
-        with WondercomClient(
-            chrome_driver_path=CHROME_DRIVER_PATH,
-            portal_url=PORTAL_URL,
-            username=wondercom_username,
-            password=wondercom_password
-        ) as client:
-            print("Cliente Wondercom inicializado")  # Log adicional
-
-            # Realiza login
-            print("Tentando realizar login no portal")  # Log adicional
-            login_success = client.login()
-            print(f"Resultado do login: {login_success}")  # Log adicional
-
-            if not login_success:
-                print("Falha ao realizar login no Portal Wondercom")  # Log adicional
-                raise HTTPException(status_code=500, detail="Falha ao realizar login no Portal Wondercom.")
-
-            # Aloca a WO
-            print(f"Login bem-sucedido. Tentando alocar WO: {work_order_id}")  # Log adicional
-            result = client.allocate_work_order(work_order_id)
-            print(f"Resultado da alocação: {result}")  # Log adicional
-
-            # Se a alocação foi bem-sucedida, armazena os dados em cache
-            if result["success"] and "dados" in result:
-                print(f"Alocação bem-sucedida. Armazenando em cache.")  # Log adicional
-                wo_cache[work_order_id] = result["dados"]
-
-            return WorkOrderResponse(
-                success=result["success"],
-                message=result["message"],
-                dados=result.get("dados")
-            )
+        # Chamar a VM API
+        vm_api_client = VMApiClient()
+        result = vm_api_client.allocate_work_order(work_order_id, credentials)
+        
+        # Se processamento síncrono, enviar notificação
+        if result.get('status') == 'success' and user.whatsapp:
+            notification_service = NotificationService()
+            
+            # Preparar mensagem com dados da WO
+            wo_data = result.get('data', {})
+            message = f"Detalhes da WO {work_order_id}:\n"
+            message += f"Endereço: {wo_data.get('endereco', 'N/A')}\n"
+            message += f"PDO: {wo_data.get('pdo', 'N/A')}\n"
+            message += f"Cor da Fibra: {wo_data.get('cor_fibra', 'N/A')}\n"
+            message += f"Coordenadas: {wo_data.get('latitude', 'N/A')}, {wo_data.get('longitude', 'N/A')}"
+            
+            # Enviar notificação
+            notification_service.send_whatsapp_notification(user.whatsapp, message)
+        
+        return jsonify(result), 200
     except Exception as e:
-        print(f"Erro ao alocar WO: {str(e)}")  # Log adicional
-        import traceback
-        print(traceback.format_exc())  # Log detalhado do erro
-        raise HTTPException(status_code=500, detail=f"Erro ao alocar WO: {str(e)}")
+        logger.error(f"Erro ao alocar WO {work_order_id}: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-@router.get("/details/{work_order_id}", response_model=WorkOrderResponse)
-async def get_work_order_details(
-    work_order_id: str,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
+@wondercom_bp.route('/api/wondercom/calcular-kms', methods=['POST'])
+@jwt_required()
+def calcular_kms():
     """
-    Obtém detalhes de uma ordem de trabalho do Portal Wondercom.
+    Endpoint para cálculo de KMs percorridos.
     """
-    print(f"Tentando obter detalhes da WO: {work_order_id}")  # Log adicional
-
-    # Verifica se a WO já está em cache
-    if work_order_id in wo_cache:
-        print(f"WO {work_order_id} encontrada em cache.")  # Log adicional
-        return WorkOrderResponse(
-            success=True,
-            message=f"WO {work_order_id} encontrada em cache.",
-            dados=wo_cache[work_order_id]
-        )
-
-    # Busca credenciais do usuário autenticado
-    wondercom_username = getattr(current_user, "usuario_portal", None)
-    wondercom_password = getattr(current_user, "senha_portal", None)
-    if not wondercom_username or not wondercom_password:
-        raise HTTPException(status_code=400, detail="Credenciais do Portal Wondercom não cadastradas para este usuário.")
-
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({"status": "error", "message": "Usuário não encontrado"}), 404
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"status": "error", "message": "Dados ausentes"}), 400
+    
+    data_inicio = data.get('data_inicio')
+    data_fim = data.get('data_fim')
+    endereco_residencial = data.get('endereco_residencial')
+    
+    if not data_inicio or not data_fim:
+        return jsonify({"status": "error", "message": "Datas de início e fim são obrigatórias"}), 400
+    
     try:
-        print("Inicializando cliente Wondercom com credenciais do usuário")  # Log adicional
-        with WondercomClient(
-            chrome_driver_path=CHROME_DRIVER_PATH,
-            portal_url=PORTAL_URL,
-            username=wondercom_username,
-            password=wondercom_password
-        ) as client:
-            print("Cliente Wondercom inicializado")  # Log adicional
-
-            # Realiza login
-            print("Tentando realizar login no portal")  # Log adicional
-            login_success = client.login()
-            print(f"Resultado do login: {login_success}")  # Log adicional
-
-            if not login_success:
-                print("Falha ao realizar login no Portal Wondercom")  # Log adicional
-                raise HTTPException(status_code=500, detail="Falha ao realizar login no Portal Wondercom.")
-
-            # Pesquisa a WO
-            print(f"Login bem-sucedido. Tentando pesquisar WO: {work_order_id}")  # Log adicional
-            dados_wo = client.search_work_order(work_order_id)
-            print(f"Resultado da pesquisa: {dados_wo}")  # Log adicional
-
-            if not dados_wo:
-                print(f"WO {work_order_id} não encontrada.")  # Log adicional
-                return WorkOrderResponse(
-                    success=False,
-                    message=f"WO {work_order_id} não encontrada.",
-                    dados=None
-                )
-
-            # Armazena os dados em cache
-            print(f"Pesquisa bem-sucedida. Armazenando em cache.")  # Log adicional
-            wo_cache[work_order_id] = dados_wo
-
-            return WorkOrderResponse(
-                success=True,
-                message=f"Detalhes da WO {work_order_id} obtidos com sucesso.",
-                dados=dados_wo
-            )
+        # Buscar WOs do período
+        work_orders = WorkOrder.query.filter(
+            WorkOrder.tecnico_id == current_user_id,
+            WorkOrder.data >= data_inicio,
+            WorkOrder.data <= data_fim,
+            WorkOrder.status == 'processado'
+        ).all()
+        
+        if not work_orders:
+            return jsonify({
+                "status": "success",
+                "total_km": 0,
+                "detalhes": []
+            }), 200
+        
+        # Extrair coordenadas
+        coordenadas = []
+        
+        # Adicionar endereço residencial se fornecido
+        if endereco_residencial:
+            # Aqui você precisaria implementar a geocodificação do endereço
+            # usando Google Maps API ou similar
+            # coords_casa = geocode_address(endereco_residencial)
+            # if coords_casa:
+            #     coordenadas.append(coords_casa)
+            pass
+        
+        # Adicionar coordenadas das WOs
+        for wo in work_orders:
+            # Extrair coordenadas do resultado da WO
+            # resultado = json.loads(wo.resultado)
+            # lat = resultado.get('latitude')
+            # lng = resultado.get('longitude')
+            # if lat and lng:
+            #     coordenadas.append({"lat": lat, "lng": lng})
+            pass
+        
+        # Adicionar endereço residencial no final se fornecido
+        if endereco_residencial and len(coordenadas) > 0:
+            coordenadas.append(coordenadas[0])
+        
+        # Calcular distâncias
+        # Aqui você precisaria implementar o cálculo de distâncias
+        # usando Google Maps API ou similar
+        # distancias = calculate_distances(coordenadas)
+        
+        # Para fins de exemplo, vamos simular um resultado
+        distancias = [10.5, 15.2, 8.7, 12.3]
+        total_km = sum(distancias)
+        
+        detalhes = [
+            {"origem": i, "destino": i+1, "distancia": dist}
+            for i, dist in enumerate(distancias)
+        ]
+        
+        return jsonify({
+            "status": "success",
+            "total_km": total_km,
+            "detalhes": detalhes
+        }), 200
     except Exception as e:
-        print(f"Erro ao obter detalhes da WO: {str(e)}")  # Log adicional
-        import traceback
-        print(traceback.format_exc())  # Log detalhado do erro
-        raise HTTPException(status_code=500, detail=f"Erro ao obter detalhes da WO: {str(e)}")
-
-@router.delete("/cache/{work_order_id}")
-async def clear_work_order_cache(work_order_id: str):
-    print(f"Tentando limpar cache da WO: {work_order_id}")  # Log adicional
-    if work_order_id in wo_cache:
-        del wo_cache[work_order_id]
-        print(f"Cache da WO {work_order_id} limpo com sucesso.")  # Log adicional
-        return {"message": f"Cache da WO {work_order_id} limpo com sucesso."}
-    print(f"WO {work_order_id} não encontrada em cache.")  # Log adicional
-    return {"message": f"WO {work_order_id} não encontrada em cache."}
-
-@router.delete("/cache")
-async def clear_all_cache():
-    print("Tentando limpar todo o cache de WOs.")  # Log adicional
-    count = len(wo_cache)
-    wo_cache.clear()
-    print(f"Cache de todas as WOs limpo com sucesso. {count} entradas removidas.")  # Log adicional
-    return {"message": f"Cache de todas as WOs limpo com sucesso. {count} entradas removidas."}
-
-@router.get("/test")
-async def test_api():
-    print("Rota de teste acessada com sucesso.")  # Log adicional
-    return {"message": "API Wondercom está funcionando corretamente!"}
+        logger.error(f"Erro ao calcular KMs: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
