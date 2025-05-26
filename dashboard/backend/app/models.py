@@ -1,47 +1,98 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from .database import Base
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+from datetime import datetime
 
-class User(Base):
-    __tablename__ = "users"
+class UserCreate(BaseModel):
+    nome_completo: str
+    email: EmailStr
+    senha: str
+    whatsapp: Optional[str] = Field(None, pattern=r'^\d{9,15}$')
+    usuario_portal: Optional[str] = None
+    senha_portal: Optional[str] = None
 
-    id = Column(Integer, primary_key=True, index=True)
-    nome_completo = Column(Text, nullable=False)
-    email = Column(Text, unique=True, index=True, nullable=False)
-    senha_hash = Column(Text, nullable=False)
-    whatsapp = Column(Text, unique=True, index=True, nullable=True)
-    usuario_portal = Column(Text, nullable=True)
-    senha_portal = Column(Text, nullable=True)
-    creditos = Column(Integer, default=5)
-    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+class UserLogin(BaseModel):
+    email: EmailStr
+    senha: str
 
-    # --- Novos campos para reset de senha ---
-    reset_token = Column(Text, nullable=True)
-    reset_token_expires = Column(DateTime(timezone=True), nullable=True)
+class UserResponse(BaseModel):
+    id: int
+    nome_completo: str
+    email: EmailStr
+    whatsapp: Optional[str]
+    creditos: int
+    criado_em: datetime
+    usuario_portal: Optional[str] = None
+    senha_portal: Optional[str] = None  # <-- ESSENCIAL! Adicionado aqui
 
-    service_values = relationship("ServiceValue", back_populates="owner")
-    wos = relationship("WO", back_populates="tecnico")
+    class Config:
+        from_attributes = True
 
-class WO(Base):
-    __tablename__ = "wos"
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-    id = Column(Integer, primary_key=True, index=True)
-    numero_wo = Column(Text, nullable=False)
-    tecnico_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Text, nullable=False)
-    tipo_servico = Column(String, nullable=False, default="desconhecido")
-    data = Column(DateTime(timezone=True), server_default=func.now())
-    causa_erro = Column(Text, nullable=True)
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
-    tecnico = relationship("User", back_populates="wos")
+# --- Esqueci/resetar senha ---
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
-class ServiceValue(Base):
-    __tablename__ = "service_values"
+class ResetPasswordRequest(BaseModel):
+    token: str
+    nova_senha: str
 
-    id = Column(Integer, primary_key=True, index=True)
-    tipo_servico = Column(String, index=True, nullable=False)
-    valor = Column(Float, nullable=False)
-    tecnico_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+# --- Editar perfil ---
+class UserUpdate(BaseModel):
+    nome_completo: Optional[str]
+    email: Optional[EmailStr]
+    whatsapp: Optional[str]
 
-    owner = relationship("User", back_populates="service_values")
+# --- Atualizar credenciais do portal ---
+class UpdatePortalCredentials(BaseModel):
+    usuario_portal: Optional[str]
+    senha_portal: Optional[str]
+
+class AddCreditsRequest(BaseModel):
+    creditos: int
+
+class TransferCreditsRequest(BaseModel):
+    email_destino: EmailStr
+    creditos: int
+
+class WOCreate(BaseModel):
+    numero_wo: str
+    status: str
+    tipo_servico: str
+    causa_erro: Optional[str] = None
+
+class WOResponse(BaseModel):
+    id: int
+    numero_wo: str
+    tecnico_id: int
+    status: str
+    tipo_servico: str
+    data: datetime
+    causa_erro: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ServiceValueCreate(BaseModel):
+    tipo_servico: str
+    valor: float
+
+class ServiceValueResponse(BaseModel):
+    id: int
+    tipo_servico: str
+    valor: float
+    tecnico_id: int
+
+    class Config:
+        from_attributes = True
+
+# Requisição para integração com o portal
+class PortalIntegrationRequest(BaseModel):
+    usuario_portal: str
+    senha_portal: str
+    whatsapp: str
