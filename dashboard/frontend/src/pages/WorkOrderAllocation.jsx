@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, MapPin, Share2, Download, Clipboard, ArrowRight } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
@@ -8,16 +8,40 @@ const WorkOrderAllocation = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [showMap, setShowMap] = useState(false);
+  const [usuario, setUsuario] = useState(null);
 
-  // Recupera usuário do perfil salvo localmente (ajuste se usar Context ou Redux)
-  const usuario = JSON.parse(localStorage.getItem("usuario")) || {};
+  // Carrega sempre o usuário atualizado da API ao montar o componente
+  useEffect(() => {
+    const fetchUsuario = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          alert("Token de autenticação não encontrado. Faça login novamente.");
+          return;
+        }
+        const response = await fetch(`${API_BASE_URL}/usuarios/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) throw new Error("Erro ao buscar usuário");
+        const dados = await response.json();
+        setUsuario(dados);
+        // Atualiza o localStorage para manter sincronizado
+        localStorage.setItem("usuario", JSON.stringify(dados));
+      } catch (err) {
+        alert("Erro ao buscar usuário. Faça login novamente.");
+      }
+    };
+    fetchUsuario();
+  }, []);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       alert("Informe o número da WO.");
       return;
     }
-    if (!usuario.usuario_portal || !usuario.senha_portal) {
+    if (!usuario?.usuario_portal || !usuario?.senha_portal) {
       alert("Credenciais do portal Wondercom não cadastradas. Cadastre no Perfil antes de usar esta função.");
       return;
     }
