@@ -2,6 +2,7 @@
 Módulo cliente para automação do Portal Wondercom.
 Baseado no script wondercom_portal_automator_v29.py
 """
+
 import time
 import logging
 import re
@@ -214,49 +215,36 @@ class WondercomClient:
             if not dados_wo:
                 return {"success": False, "message": f"WO {work_order_id} não encontrada."}
             estado_wo = dados_wo["estado"]
-            if estado_wo in ["ALLOCATED", "JOB START"]:
+
+            # Só tenta alocar se o estado for IN PROGRESS
+            if estado_wo != "IN PROGRESS":
+                logger.info(f"WO {work_order_id} está no estado '{estado_wo}', não será tentada alocação. Apenas consulta.")
                 return {
                     "success": True,
-                    "message": f"WO {work_order_id} já está no estado {estado_wo}.",
+                    "message": f"WO {work_order_id} está no estado '{estado_wo}', apenas consulta realizada.",
                     "dados": dados_wo
                 }
-            if estado_wo == "IN PROGRESS":
-                logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
-                if self.clicar_por_texto("Avançar Auto-Alocacao"):
-                    if self.clicar_por_texto("Evoluir WorkOrder"):
-                        if self.clicar_por_texto("Sim"):
-                            time.sleep(2)
-                            if self.clicar_por_texto("Ok"):
-                                logger.info("Botão 'Ok' da janela de informação clicado com sucesso.")
-                            else:
-                                logger.warning("ATENÇÃO: Não foi possível clicar no botão 'Ok' da janela de informação.")
-                            time.sleep(5)
-                            dados_atualizados = self.search_work_order(work_order_id)
-                            return {
-                                "success": True,
-                                "message": f"WO {work_order_id} alocada com sucesso (IN PROGRESS -> ALLOCATED).",
-                                "dados": dados_atualizados
-                            }
-                return {
-                    "success": False,
-                    "message": f"Falha ao alocar WO {work_order_id} (IN PROGRESS -> ALLOCATED).",
-                    "dados": dados_wo
-                }
-            logger.info(f"Tentando alocar WO {work_order_id} do estado {estado_wo}")
-            if self.clicar_por_texto("Avançar"):
-                time.sleep(3)
-                if "Confirmar" in self.driver.page_source:
-                    self.clicar_por_texto("Sim")
-                    time.sleep(2)
-                dados_atualizados = self.search_work_order(work_order_id)
-                return {
-                    "success": True,
-                    "message": f"WO {work_order_id} alocada com sucesso.",
-                    "dados": dados_atualizados
-                }
+
+            # Aqui só chega se for IN PROGRESS → tenta alocar
+            logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
+            if self.clicar_por_texto("Avançar Auto-Alocacao"):
+                if self.clicar_por_texto("Evoluir WorkOrder"):
+                    if self.clicar_por_texto("Sim"):
+                        time.sleep(2)
+                        if self.clicar_por_texto("Ok"):
+                            logger.info("Botão 'Ok' da janela de informação clicado com sucesso.")
+                        else:
+                            logger.warning("ATENÇÃO: Não foi possível clicar no botão 'Ok' da janela de informação.")
+                        time.sleep(5)
+                        dados_atualizados = self.search_work_order(work_order_id)
+                        return {
+                            "success": True,
+                            "message": f"WO {work_order_id} alocada com sucesso (IN PROGRESS -> ALLOCATED).",
+                            "dados": dados_atualizados
+                        }
             return {
                 "success": False,
-                "message": f"Falha ao alocar WO {work_order_id}.",
+                "message": f"Falha ao alocar WO {work_order_id} (IN PROGRESS -> ALLOCATED).",
                 "dados": dados_wo
             }
         except Exception as e:

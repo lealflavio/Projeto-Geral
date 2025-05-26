@@ -1,113 +1,145 @@
-import time
-import logging
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException
+"""
+Módulo de integração entre o OrquestradorAdapter e o WondercomClient.
+Este arquivo implementa a adaptação necessária para utilizar o cliente Selenium existente.
+"""
 
-# (Opcional) logging para debug
+import sys
+import os
+import logging
+from pathlib import Path
+
+# Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class WondercomClient:
-    def __init__(self, chrome_driver_path, portal_url, username, password):
-        self.chrome_driver_path = chrome_driver_path
-        self.portal_url = portal_url
-        self.username = username
-        self.password = password
-        self.driver = None
-        self.wait = None
-        self.actions = None
+# Adicionar diretório raiz ao path para importar os módulos necessários
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-    def __enter__(self):
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--window-size=1920,1080")
-        service = Service(self.chrome_driver_path)
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        self.wait = WebDriverWait(self.driver, 30)
-        self.actions = ActionChains(self.driver)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self.driver:
-            self.driver.quit()
-            self.driver = None
-            self.wait = None
-            self.actions = None
-
-    def login(self):
-        self.driver.get(self.portal_url)
-        time.sleep(2)
-        try:
-            self.wait.until(EC.visibility_of_element_located((By.ID, "_58_login"))).send_keys(self.username)
-            self.wait.until(EC.visibility_of_element_located((By.ID, "_58_password"))).send_keys(self.password)
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='submit']"))).click()
-            logger.info("Login realizado com sucesso.")
-            time.sleep(4)
-            self.wait.until(EC.title_contains("Pesquisa de Intervenções"))
-            return True
-        except Exception as e:
-            logger.error(f"Erro no login: {e}")
-            return False
-
-    def alocar_wo(self, wo_id):
-        try:
-            # Aguarda até o campo de busca da WO estar visível
-            campo_wo = self.wait.until(EC.visibility_of_element_located(
-                (By.XPATH, "//input[@class='v-textfield' and @aria-hidden='false']")
-            ))
-            campo_wo.clear()
-            campo_wo.send_keys(wo_id)
-            time.sleep(1)
-            # Botão pesquisar
-            btn_search = self.wait.until(EC.element_to_be_clickable(
-                (By.XPATH, "//span[normalize-space()='Pesquisar']/ancestor::div[contains(@class,'v-button') and not(contains(@class,'v-disabled'))]")
-            ))
-            btn_search.click()
-            logger.info("Clicado no botão 'Pesquisar'")
-            time.sleep(5)
-            # (Opcional) Buscar o status da WO
-            try:
-                linha = self.wait.until(EC.visibility_of_element_located((
-                    By.XPATH, f"//tr[@class='v-table-row'][.//div[contains(text(), '{wo_id}')]]"
-                )))
-                estado_element = linha.find_element(By.XPATH, ".//td[contains(@class, 'v-table-cell-content')][div[contains(text(),'IN PROGRESS') or contains(text(),'ALLOCATED') or contains(text(),'JOB START')]]")
-                wo_status = estado_element.text.strip().upper()
-            except TimeoutException:
-                logger.error(f"WO {wo_id} não encontrada.")
-                return {"status": "error", "error": f"WO {wo_id} não encontrada."}
-            return {
-                "status": "success",
-                "wo_id": wo_id,
-                "wo_status": wo_status
-            }
-        except Exception as e:
-            logger.error(f"Erro ao alocar WO: {e}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
-
+# Importar o cliente Selenium existente
+try:
+    from vm_api.wondercom_client import WondercomClient
+    logger.info("Módulo WondercomClient importado com sucesso")
+except ImportError as e:
+    logger.error(f"Erro ao importar WondercomClient: {e}")
+    # Fallback para ambiente de teste/desenvolvimento
+    try:
+        # Tentar importar de um caminho relativo para testes
+        sys.path.append('/home/flavioleal/Sistema')
+        from wondercom_client import WondercomClient
+        logger.info("Módulo WondercomClient importado do caminho alternativo")
+    except ImportError as e2:
+        logger.error(f"Erro ao importar WondercomClient do caminho alternativo: {e2}")
+        raise
 
 class WondercomIntegration:
+    """
+    Classe de integração entre o OrquestradorAdapter e o WondercomClient.
+    Fornece métodos para utilizar o cliente Selenium existente a partir da VM API.
+    """
+    
+    # Configurações padrão
+    DEFAULT_CHROME_DRIVER_PATH = "/usr/local/bin/chromedriver"
+    DEFAULT_PORTAL_URL = "https://portal.wondercom.pt/group/guest/intervencoes"
+    
     @staticmethod
-    def alocar_wo(wo_id, credentials):
-        with WondercomClient(
-            chrome_driver_path="/usr/local/bin/chromedriver",
-            portal_url="https://portal.wondercom.pt/group/guest/intervencoes",
-            username=credentials["username"],
-            password=credentials["password"]
-        ) as client:
-            logged_in = client.login()
-            if not logged_in:
-                return {"status": "error", "error": "Falha no login"}
+    def alocar_wo(work_order_id, credentials, chrome_driver_path=None, portal_url=None):
+        """
+        Aloca uma ordem de trabalho utilizando o cliente Selenium existente.
+        
+        Args:
+            work_order_id (str): ID da ordem de trabalho
+            credentials (dict): Credenciais do usuário (username, password)
+            chrome_driver_path (str, opcional): Caminho para o chromedriver
+            portal_url (str, opcional): URL do portal Wondercom
             
-            resultado = client.alocar_wo(wo_id)
-            return resultado
+        Returns:
+            dict: Resultado da alocação
+        """
+        logger.info(f"Iniciando alocação da WO {work_order_id} via WondercomClient")
+        
+        client = None
+        try:
+            # Extrair credenciais
+            username = credentials.get('username')
+            password = credentials.get('password')
+            
+            if not username or not password:
+                raise ValueError("Credenciais incompletas")
+            
+            # Definir caminhos padrão se não fornecidos
+            chrome_driver_path = chrome_driver_path or WondercomIntegration.DEFAULT_CHROME_DRIVER_PATH
+            portal_url = portal_url or WondercomIntegration.DEFAULT_PORTAL_URL
+            
+            # Inicializar o cliente Selenium
+            client = WondercomClient(
+                chrome_driver_path=chrome_driver_path,
+                portal_url=portal_url,
+                username=username,
+                password=password
+            )
+            
+            # Iniciar o driver
+            client.start_driver()
+            
+            # Realizar login
+            login_success = client.login()
+            if not login_success:
+                raise Exception("Falha no login")
+            
+            # Alocar a ordem de trabalho
+            result = client.allocate_work_order(work_order_id)
+            
+            if result.get("success"):
+                # Extrair dados relevantes
+                dados_wo = result.get('dados', {})
+                
+                # Formatar o resultado conforme esperado pela API
+                formatted_result = {
+                    "status": "success",
+                    "data": {
+                        "endereco": dados_wo.get('morada', 'N/A'),
+                        "pdo": dados_wo.get('slid', 'N/A'),
+                        "cor_fibra": dados_wo.get('fibra', 'N/A'),
+                        "cor_fibra_hex": "#0000FF",  # Valor padrão, pode ser extraído se disponível
+                        "latitude": None,
+                        "longitude": None,
+                        "estado": dados_wo.get('estado', 'N/A'),
+                        "descricao": dados_wo.get('descricao', 'N/A')
+                    }
+                }
+                
+                # Extrair coordenadas se disponíveis
+                coordenadas = dados_wo.get('coordenadas')
+                if coordenadas:
+                    try:
+                        lat, lng = coordenadas.split(',')
+                        formatted_result["data"]["latitude"] = float(lat.strip())
+                        formatted_result["data"]["longitude"] = float(lng.strip())
+                    except Exception as e:
+                        logger.warning(f"Erro ao extrair coordenadas: {e}")
+                
+                logger.info(f"Alocação concluída com sucesso para WO: {work_order_id}")
+                return formatted_result
+            else:
+                # Retornar erro
+                error_message = result.get('message', 'Erro desconhecido na alocação')
+                logger.error(f"Erro na alocação da WO {work_order_id}: {error_message}")
+                return {
+                    "status": "error",
+                    "error": error_message,
+                    "error_type": "AllocationError"
+                }
+        except Exception as e:
+            logger.error(f"Erro na alocação da WO {work_order_id}: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+        finally:
+            # Garantir que o navegador seja fechado em caso de erro
+            try:
+                if client:
+                    client.close_driver()
+            except Exception as e:
+                logger.warning(f"Erro ao fechar o navegador: {e}")
