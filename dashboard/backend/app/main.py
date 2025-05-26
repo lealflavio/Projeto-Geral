@@ -1,9 +1,34 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from .database import engine, Base
 from .routes import auth as auth_routes
 from .routes import dashboard as dashboard_routes
 from .routes import usuarios as usuarios_routes
+
+# Configuração de domínios permitidos para CORS
+# Em produção, especifique explicitamente todos os domínios necessários
+ALLOWED_ORIGINS = [
+    # Domínios de produção identificados na documentação e código
+    "https://zincoapp.pt",                      # Domínio original
+    "https://dashboard-frontend.netlify.app",   # Frontend em testes/homologação
+    "https://wondercom-automation.netlify.app", # Frontend em produção
+    
+    # Domínios de backend para callbacks
+    "https://wondercom-automation-backend.onrender.com",
+    "https://api.projeto-geral.render.com",
+    
+    # Domínios de desenvolvimento (opcional, remover em produção)
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173"
+]
+
+# Permitir configuração via variável de ambiente (opcional)
+if os.getenv("ADDITIONAL_CORS_ORIGINS"):
+    additional_origins = os.getenv("ADDITIONAL_CORS_ORIGINS").split(",")
+    ALLOWED_ORIGINS.extend([origin.strip() for origin in additional_origins])
 
 app = FastAPI(
     title="Wondercom Dashboard API",
@@ -14,9 +39,10 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Configuração CORS atualizada para incluir todos os domínios necessários
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://zincoapp.pt"],  # Só permite seu domínio!
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
