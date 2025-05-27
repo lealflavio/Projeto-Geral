@@ -1,100 +1,110 @@
 """
-Endpoints de callback para receber resultados da VM API.
-Este módulo implementa as rotas para receber callbacks da VM.
+Endpoint de callback para receber resultados da VM.
+Este arquivo implementa os endpoints para receber callbacks da VM.
 """
-
 from flask import Blueprint, request, jsonify
 import logging
-from ..models import db, WorkOrder, User
-from ..services.notification_service import NotificationService
+from ..models import User, Task
+from ..services.drive_service import DriveService
 
 # Configurar logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Criar blueprint
 callbacks_bp = Blueprint('callbacks', __name__)
 
-@callbacks_bp.route('/api/callbacks/allocation-result', methods=['POST'])
-def allocation_result():
+@callbacks_bp.route('/api/callbacks/folders', methods=['POST'])
+def folder_creation_callback():
     """
-    Endpoint para receber resultados de alocação de WO.
+    Endpoint para receber callback de criação de pastas na VM.
     """
     data = request.get_json()
     
+    # Validar dados de entrada
     if not data:
         return jsonify({"status": "error", "message": "Dados ausentes"}), 400
     
+    user_id = data.get('user_id')
     job_id = data.get('job_id')
     status = data.get('status')
+    result = data.get('result', {})
     
-    logger.info(f"Recebido callback de alocação para job {job_id} com status {status}")
+    logger.info(f"Callback recebido para criação de pastas: user_id={user_id}, job_id={job_id}, status={status}")
     
-    # Processar o resultado
-    if status == "success":
-        # Extrair dados da WO
-        wo_data = data.get('data', {})
+    try:
+        # Atualizar status da tarefa no banco de dados
+        task = Task.query.filter_by(job_id=job_id).first()
+        if task:
+            task.status = status
+            task.result = result
+            task.save()
         
-        # Aqui você pode armazenar os dados no banco de dados
-        # e enviar notificações para o usuário
+        # Atualizar informações do usuário se a criação foi bem-sucedida
+        if status == "success" and user_id:
+            user = User.query.get(user_id)
+            if user:
+                # Atualizar IDs das pastas do Drive
+                drive_folders = result.get('drive_folders', {})
+                if drive_folders:
+                    user.drive_folder_id = drive_folders.get('user_folder_id')
+                    user.drive_novos_folder_id = drive_folders.get('novos_folder_id')
+                    user.drive_processados_folder_id = drive_folders.get('processados_folder_id')
+                    user.drive_erros_folder_id = drive_folders.get('erros_folder_id')
+                
+                # Atualizar caminhos das pastas na VM
+                vm_folders = result.get('vm_folders', {})
+                if vm_folders:
+                    user.vm_folder_path = vm_folders.get('user_folder')
+                    user.vm_novos_path = vm_folders.get('novos_folder')
+                    user.vm_processados_path = vm_folders.get('processados_folder')
+                    user.vm_erros_path = vm_folders.get('erros_folder')
+                
+                user.folders_created = True
+                user.save()
+                
+                logger.info(f"Informações de pastas atualizadas para o usuário {user_id}")
         
-        # Exemplo de notificação via Twilio
-        # notification_service = NotificationService()
-        # notification_service.send_whatsapp_notification(user.whatsapp, message)
-        
-        return jsonify({"status": "success", "message": "Resultado processado com sucesso"}), 200
-    else:
-        # Processar erro
-        error = data.get('error', 'Erro desconhecido')
-        logger.error(f"Erro na alocação da WO: {error}")
-        
-        return jsonify({"status": "error", "message": "Erro processado"}), 200
+        return jsonify({"status": "success"}), 200
+    
+    except Exception as e:
+        logger.error(f"Erro ao processar callback de criação de pastas: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-@callbacks_bp.route('/api/callbacks/processing-result', methods=['POST'])
-def processing_result():
+@callbacks_bp.route('/api/callbacks/process', methods=['POST'])
+def file_processing_callback():
     """
-    Endpoint para receber resultados de processamento de PDF.
+    Endpoint para receber callback de processamento de arquivos na VM.
     """
     data = request.get_json()
     
+    # Validar dados de entrada
     if not data:
         return jsonify({"status": "error", "message": "Dados ausentes"}), 400
     
+    user_id = data.get('user_id')
     job_id = data.get('job_id')
     status = data.get('status')
+    result = data.get('result', {})
     
-    logger.info(f"Recebido callback de processamento para job {job_id} com status {status}")
+    logger.info(f"Callback recebido para processamento de arquivos: user_id={user_id}, job_id={job_id}, status={status}")
     
-    # Processar o resultado
-    if status == "success":
-        # Extrair dados do processamento
-        processing_data = data.get('data', {})
+    try:
+        # Atualizar status da tarefa no banco de dados
+        task = Task.query.filter_by(job_id=job_id).first()
+        if task:
+            task.status = status
+            task.result = result
+            task.save()
         
-        # Aqui você pode atualizar o status da WO no banco de dados,
-        # decrementar créditos do usuário e enviar notificações
+        # Registrar estatísticas de processamento se bem-sucedido
+        if status == "success" and user_id:
+            # Aqui você pode adicionar lógica para registrar estatísticas
+            # ou acionar outros processos baseados no resultado
+            pass
         
-        # Exemplo de atualização de WO e créditos
-        # work_order = WorkOrder.query.filter_by(job_id=job_id).first()
-        # if work_order:
-        #     work_order.status = 'processado'
-        #     work_order.resultado = json.dumps(processing_data)
-        #     
-        #     # Decrementar créditos
-        #     user = User.query.get(work_order.tecnico_id)
-        #     if user:
-        #         user.creditos -= 1
-        #         db.session.commit()
-        
-        return jsonify({"status": "success", "message": "Resultado processado com sucesso"}), 200
-    else:
-        # Processar erro
-        error = data.get('error', 'Erro desconhecido')
-        logger.error(f"Erro no processamento do PDF: {error}")
-        
-        # Atualizar status da WO para erro
-        # work_order = WorkOrder.query.filter_by(job_id=job_id).first()
-        # if work_order:
-        #     work_order.status = 'erro'
-        #     work_order.erro = error
-        #     db.session.commit()
-        
-        return jsonify({"status": "error", "message": "Erro processado"}), 200
+        return jsonify({"status": "success"}), 200
+    
+    except Exception as e:
+        logger.error(f"Erro ao processar callback de processamento de arquivos: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

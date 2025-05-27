@@ -1,16 +1,16 @@
-# Tarefas para Implementação do Monitoramento do Google Drive
+# Tarefas para Implementação da Integração VM-Drive
 
 - [x] Autenticar no GitHub com o token fornecido
-- [x] Localizar e analisar código de monitoramento do Google Drive
-- [x] Identificar pontos de integração ou falhas
-- [x] Implementar ajustes para funcionamento completo
-  - [x] Criar serviço de integração com Google Drive API
-  - [x] Implementar lógica de processamento de notificações
-  - [x] Adicionar funcionalidade para baixar arquivos
-  - [x] Implementar movimentação de arquivos entre pastas
-  - [x] Adicionar tratamento de erros
-- [x] Validar funcionamento do monitoramento
-- [x] Criar novo branch (feature/google-drive-monitoring)
+- [x] Analisar documentação de integração Dashboard-VM
+- [x] Localizar e analisar código allocate e sistemas na porta 5000
+- [x] Definir fluxo para criação de pastas na VM e no Drive
+- [x] Implementar criação automatizada de pastas e compartilhamento
+  - [x] Criar endpoint na VM para gerenciamento de pastas
+  - [x] Modificar serviço de Drive para delegar download/movimentação à VM
+  - [x] Implementar compartilhamento da pasta "Novos" com o usuário
+  - [x] Integrar criação de pastas com o fluxo de perfil do usuário
+- [x] Validar funcionamento integrado e teste
+- [x] Criar branch (feature/vm-drive-integration)
 - [ ] Fazer commit das alterações
 - [ ] Abrir pull request para a branch master
 - [ ] Reportar status e resultados ao usuário
