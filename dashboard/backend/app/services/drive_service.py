@@ -3,14 +3,14 @@ Serviço de integração com Google Drive para monitoramento de pastas.
 Este módulo implementa as funcionalidades necessárias para:
 1. Autenticar com a API do Google Drive
 2. Listar arquivos em pastas específicas
-3. Baixar arquivos
-4. Mover arquivos entre pastas
-5. Processar notificações de alterações
+3. Criar e compartilhar pastas
+4. Delegar download e movimentação para a VM
 """
 
 import os
 import json
 import logging
+import requests
 from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -27,6 +27,10 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("drive_service")
+
+# URL da API da VM
+VM_API_URL = os.environ.get('VM_API_URL', 'http://localhost:5000')
+VM_API_KEY = os.environ.get('VM_API_KEY', 'api-key-temporaria')
 
 class DriveService:
     """Classe para gerenciar operações com o Google Drive."""
@@ -119,6 +123,8 @@ class DriveService:
     def download_file(self, file_id, destination_path):
         """
         Baixa um arquivo do Google Drive.
+        NOTA: Esta função é mantida para compatibilidade, mas o download
+        deve ser delegado à VM para novos fluxos.
         
         Args:
             file_id (str): ID do arquivo no Google Drive.
@@ -157,6 +163,8 @@ class DriveService:
     def move_file(self, file_id, destination_folder_id):
         """
         Move um arquivo para outra pasta no Google Drive.
+        NOTA: Esta função é mantida para compatibilidade, mas a movimentação
+        deve ser delegada à VM para novos fluxos.
         
         Args:
             file_id (str): ID do arquivo a ser movido.
@@ -241,10 +249,50 @@ class DriveService:
             self.log_drive_error(e, "create_folder", folder_name=folder_name, parent_folder_id=parent_folder_id)
             return None
     
+    def share_folder(self, folder_id, email, role='reader'):
+        """
+        Compartilha uma pasta com um usuário específico.
+        
+        Args:
+            folder_id (str): ID da pasta a ser compartilhada.
+            email (str): Email do usuário com quem compartilhar.
+            role (str): Papel do usuário (reader, writer, commenter, owner).
+            
+        Returns:
+            bool: True se a pasta foi compartilhada com sucesso, False caso contrário.
+        """
+        if not self.service:
+            logger.error("Serviço do Google Drive não inicializado.")
+            return False
+        
+        try:
+            # Cria a permissão
+            permission = {
+                'type': 'user',
+                'role': role,
+                'emailAddress': email
+            }
+            
+            # Compartilha a pasta
+            self.service.permissions().create(
+                fileId=folder_id,
+                body=permission,
+                sendNotificationEmail=True,
+                fields='id'
+            ).execute()
+            
+            logger.info(f"Pasta {folder_id} compartilhada com sucesso com {email}.")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Erro ao compartilhar pasta {folder_id} com {email}: {str(e)}")
+            self.log_drive_error(e, "share_folder", folder_id=folder_id, email=email, role=role)
+            return False
+    
     def ensure_folder_structure(self, base_folder_id):
         """
         Garante que a estrutura de pastas necessária existe.
-        Cria pastas 'concluidos' e 'erros' se não existirem.
+        Cria pastas 'Processados' e 'Erros' se não existirem.
         
         Args:
             base_folder_id (str): ID da pasta base.
@@ -254,84 +302,196 @@ class DriveService:
         """
         folders = {
             'base': base_folder_id,
-            'concluidos': None,
+            'processados': None,
             'erros': None
         }
         
-        # Cria pasta de concluídos se não existir
-        folders['concluidos'] = self.create_folder('concluidos', base_folder_id)
+        # Cria pasta de processados se não existir
+        folders['processados'] = self.create_folder('Processados', base_folder_id)
         
         # Cria pasta de erros se não existir
-        folders['erros'] = self.create_folder('erros', base_folder_id)
+        folders['erros'] = self.create_folder('Erros', base_folder_id)
         
         return folders
     
-    def process_notification(self, notification_data, base_folder_id, download_path):
+    def create_user_folders(self, user_id, user_email):
+        """
+        Cria estrutura de pastas para um usuário e delega à VM.
+        
+        Args:
+            user_id (str): ID do usuário.
+            user_email (str): Email do usuário para compartilhamento.
+            
+        Returns:
+            dict: Informações sobre as pastas criadas.
+        """
+        logger.info(f"Criando pastas para usuário {user_id} com email {user_email}")
+        
+        try:
+            # Criar pasta principal do usuário
+            user_folder_name = f"Usuario_{user_id}"
+            user_folder_id = self.create_folder(user_folder_name, "root")
+            
+            if not user_folder_id:
+                raise Exception(f"Falha ao criar pasta principal para usuário {user_id}")
+            
+            # Criar subpastas
+            novos_folder_id = self.create_folder("Novos", user_folder_id)
+            processados_folder_id = self.create_folder("Processados", user_folder_id)
+            erros_folder_id = self.create_folder("Erros", user_folder_id)
+            
+            # Compartilhar pasta "Novos" com o usuário
+            if novos_folder_id:
+                shared = self.share_folder(novos_folder_id, user_email, role='writer')
+                if not shared:
+                    logger.warning(f"Falha ao compartilhar pasta 'Novos' com o usuário {user_email}")
+            
+            # Delegar criação de pastas na VM
+            self.delegate_folder_creation_to_vm(user_id, user_email, {
+                "user_folder_id": user_folder_id,
+                "novos_folder_id": novos_folder_id,
+                "processados_folder_id": processados_folder_id,
+                "erros_folder_id": erros_folder_id
+            })
+            
+            logger.info(f"Pastas criadas com sucesso para usuário {user_id}")
+            
+            return {
+                "user_folder_id": user_folder_id,
+                "novos_folder_id": novos_folder_id,
+                "processados_folder_id": processados_folder_id,
+                "erros_folder_id": erros_folder_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar pastas para usuário {user_id}: {str(e)}")
+            self.log_drive_error(e, "create_user_folders", user_id=user_id, user_email=user_email)
+            raise
+    
+    def delegate_folder_creation_to_vm(self, user_id, user_email, drive_folders):
+        """
+        Delega a criação de pastas na VM.
+        
+        Args:
+            user_id (str): ID do usuário.
+            user_email (str): Email do usuário.
+            drive_folders (dict): Informações sobre as pastas criadas no Drive.
+            
+        Returns:
+            bool: True se a delegação foi bem-sucedida, False caso contrário.
+        """
+        logger.info(f"Delegando criação de pastas na VM para usuário {user_id}")
+        
+        try:
+            # Preparar dados para a requisição
+            url = f"{VM_API_URL}/api/folders/create"
+            headers = {
+                'Content-Type': 'application/json',
+                'X-API-Key': VM_API_KEY
+            }
+            payload = {
+                'user_id': user_id,
+                'user_email': user_email,
+                'drive_folders': drive_folders,
+                'async': True,
+                'callback_url': f"{os.environ.get('BACKEND_URL', 'http://localhost:5000')}/api/callbacks/folders"
+            }
+            
+            # Enviar requisição para a VM
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Delegação de criação de pastas na VM concluída: {result}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Erro ao delegar criação de pastas na VM: {str(e)}")
+            self.log_drive_error(e, "delegate_folder_creation_to_vm", user_id=user_id)
+            return False
+    
+    def delegate_file_processing_to_vm(self, user_id, drive_folder_id):
+        """
+        Delega o processamento de arquivos à VM.
+        
+        Args:
+            user_id (str): ID do usuário.
+            drive_folder_id (str): ID da pasta do Drive a ser monitorada.
+            
+        Returns:
+            dict: Resultado da delegação.
+        """
+        logger.info(f"Delegando processamento de arquivos à VM para usuário {user_id}")
+        
+        try:
+            # Preparar dados para a requisição
+            url = f"{VM_API_URL}/api/folders/process"
+            headers = {
+                'Content-Type': 'application/json',
+                'X-API-Key': VM_API_KEY
+            }
+            payload = {
+                'user_id': user_id,
+                'drive_folder_id': drive_folder_id,
+                'async': True,
+                'callback_url': f"{os.environ.get('BACKEND_URL', 'http://localhost:5000')}/api/callbacks/process"
+            }
+            
+            # Enviar requisição para a VM
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Delegação de processamento de arquivos concluída: {result}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Erro ao delegar processamento de arquivos à VM: {str(e)}")
+            self.log_drive_error(e, "delegate_file_processing_to_vm", user_id=user_id, drive_folder_id=drive_folder_id)
+            return {
+                "status": "error",
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+    
+    def process_notification(self, notification_data, base_folder_id, user_id):
         """
         Processa uma notificação de alteração no Google Drive.
+        Delega o processamento à VM.
         
         Args:
             notification_data (dict): Dados da notificação.
             base_folder_id (str): ID da pasta base a ser monitorada.
-            download_path (str): Caminho base para download de arquivos.
+            user_id (str): ID do usuário.
             
         Returns:
             dict: Resultado do processamento.
         """
+        logger.info(f"Processando notificação do Drive para usuário {user_id}")
+        
         try:
-            # Garante que a estrutura de pastas existe
-            folders = self.ensure_folder_structure(base_folder_id)
+            # Delegar processamento à VM
+            result = self.delegate_file_processing_to_vm(user_id, base_folder_id)
             
-            # Lista arquivos novos na pasta base
-            files = self.list_files(base_folder_id, file_types=['application/pdf'])
-            
-            # Processa cada arquivo
-            results = {
-                'processed': [],
-                'errors': []
-            }
-            
-            for file in files:
-                file_id = file['id']
-                file_name = file['name']
-                
-                # Define o caminho de destino para o download
-                destination_path = os.path.join(download_path, file_name)
-                
-                # Baixa o arquivo
-                downloaded_path = self.download_file(file_id, destination_path)
-                
-                if downloaded_path:
-                    # Move o arquivo para a pasta de concluídos
-                    if self.move_file(file_id, folders['concluidos']):
-                        results['processed'].append({
-                            'file_id': file_id,
-                            'file_name': file_name,
-                            'local_path': downloaded_path,
-                            'status': 'success'
-                        })
-                    else:
-                        results['errors'].append({
-                            'file_id': file_id,
-                            'file_name': file_name,
-                            'error': 'Falha ao mover arquivo para pasta de concluídos'
-                        })
-                else:
-                    # Move o arquivo para a pasta de erros
-                    if self.move_file(file_id, folders['erros']):
-                        results['errors'].append({
-                            'file_id': file_id,
-                            'file_name': file_name,
-                            'error': 'Falha ao baixar arquivo'
-                        })
-            
-            logger.info(f"Processamento concluído: {len(results['processed'])} arquivos processados, {len(results['errors'])} erros.")
-            return results
+            if result.get("status") == "accepted":
+                return {
+                    "status": "accepted",
+                    "message": "Processamento delegado à VM",
+                    "job_id": result.get("job_id")
+                }
+            else:
+                return {
+                    "status": "error",
+                    "error": "Falha ao delegar processamento à VM",
+                    "details": result
+                }
             
         except Exception as e:
             logger.error(f"Erro ao processar notificação: {str(e)}")
-            self.log_drive_error(e, "process_notification", base_folder_id=base_folder_id)
-            return {'processed': [], 'errors': [{'error': str(e)}]}
+            self.log_drive_error(e, "process_notification", base_folder_id=base_folder_id, user_id=user_id)
+            return {'status': 'error', 'error': str(e)}
     
     def log_drive_error(self, exception, operation, **context):
         """
@@ -350,8 +510,3 @@ class DriveService:
         }
         
         logger.error(f"Drive error: {json.dumps(error_log)}")
-        
-        # Aqui você pode implementar lógica adicional como:
-        # - Enviar notificação por email
-        # - Registrar em banco de dados
-        # - Acionar sistema de alertas
