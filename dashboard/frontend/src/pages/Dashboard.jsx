@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { 
   BarChart, 
   Bar, 
@@ -25,6 +25,49 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
+
+// Criando um QueryClient para o Dashboard
+const queryClient = new QueryClient();
+
+// Componente de Error Boundary
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Dashboard error:", error, errorInfo);
+    this.setState({ error, errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-red-50 p-6 rounded-lg text-red-700">
+          <h2 className="text-xl font-bold mb-4">Algo deu errado</h2>
+          <p className="mb-4">Ocorreu um erro ao carregar o dashboard.</p>
+          <p className="text-sm mb-4">{this.state.error && this.state.error.toString()}</p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false });
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-sm transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Simulação de chamada à API para dados dinâmicos
 const fetchDashboardData = async () => {
@@ -65,7 +108,7 @@ const fetchDashboardData = async () => {
   });
 };
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(false);
 
@@ -393,6 +436,17 @@ const Dashboard = () => {
         </motion.div>
       </div>
     </div>
+  );
+};
+
+// Componente principal que encapsula o conteúdo com QueryClientProvider e ErrorBoundary
+const Dashboard = () => {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <DashboardContent />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
