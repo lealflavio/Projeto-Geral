@@ -1,7 +1,19 @@
 import re
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from .. import database, models, schemas, auth
+from .. import database, models, schemas
+# Importar a versão com debug para diagnóstico
+from ..auth_debug import get_current_user, get_current_active_user
+import logging
+
+# Configurar logging
+logger = logging.getLogger("usuarios_debug")
+logger.setLevel(logging.DEBUG)
+# Garantir que o logger tenha um handler para console
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
 router = APIRouter(prefix="/usuarios", tags=["Usuários"])
 
@@ -10,19 +22,23 @@ USUARIO_PORTAL_REGEX = re.compile(r"^[a-z]+\.[a-z]+$")
 
 @router.get("/me", response_model=schemas.UserResponse)
 def get_me(
+    request: Request,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    current_user: models.User = Depends(get_current_active_user)
 ):
     """
     Retorna os dados do usuário autenticado.
     """
+    logger.debug(f"Requisição recebida para /usuarios/me. URL: {request.url}")
+    logger.debug(f"Headers da requisição: {dict(request.headers)}")
+    logger.debug(f"Usuário autenticado com sucesso: {current_user.email}")
     return current_user
 
 @router.put("/atualizar", response_model=schemas.UserResponse)
 def atualizar_perfil(
     dados: schemas.UserUpdate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    current_user: models.User = Depends(get_current_active_user)
 ):
     """
     Atualiza nome, email, whatsapp ou senha do usuário autenticado.
@@ -33,7 +49,7 @@ def atualizar_perfil(
         atualizou = True
     if dados.email:
         email = dados.email.strip().lower()
-        if auth.get_user_by_email(db, email) and current_user.email != email:
+        if get_user_by_email(db, email) and current_user.email != email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="E-mail já cadastrado."
@@ -42,7 +58,7 @@ def atualizar_perfil(
         atualizou = True
     if dados.whatsapp:
         whatsapp = dados.whatsapp.strip()
-        if auth.get_user_by_whatsapp(db, whatsapp) and current_user.whatsapp != whatsapp:
+        if get_user_by_whatsapp(db, whatsapp) and current_user.whatsapp != whatsapp:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="WhatsApp já cadastrado."
@@ -50,7 +66,7 @@ def atualizar_perfil(
         current_user.whatsapp = whatsapp
         atualizou = True
     if dados.senha:
-        current_user.senha_hash = auth.get_password_hash(dados.senha)
+        current_user.senha_hash = get_password_hash(dados.senha)
         atualizou = True
 
     if not atualizou:
@@ -66,7 +82,7 @@ def atualizar_perfil(
 def integrar_portal_k1(
     dados: schemas.UpdatePortalCredentials,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    current_user: models.User = Depends(get_current_active_user)
 ):
     """
     Atualiza/integra usuário com o portal K1.
