@@ -9,27 +9,25 @@ import {
   User,
   Menu,
   X,
+  Navigation,
 } from "lucide-react";
-
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
   const links = [
     { name: "Início", icon: <Home size={20} />, path: "/dashboard" },
     { name: "Créditos", icon: <DollarSign size={20} />, path: "/creditos" },
     { name: "Alocar WO", icon: <List size={20} />, path: "/alocar-wo" },
     { name: "Simulador", icon: <BarChart size={20} />, path: "/simulador" },    
     { name: "Minhas WOs", icon: <List size={20} />, path: "/wos" },
+    { name: "Mapa de KMs", icon: <Navigation size={20} />, path: "/mapa-kms" },
     { name: "Perfil", icon: <User size={20} />, path: "/perfil" },
   ];
-
   const logout = () => {
     localStorage.removeItem("authToken");
     navigate("/");
   };
-
   return (
     <>
       {/* Botão mobile de abrir menu */}
@@ -38,7 +36,6 @@ const Sidebar = () => {
           <Menu size={28} className="text-[#333]" />
         </button>
       </div>
-
       {/* Overlay ao abrir menu mobile */}
       {open && (
         <div
@@ -46,7 +43,6 @@ const Sidebar = () => {
           onClick={() => setOpen(false)}
         />
       )}
-
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
@@ -60,7 +56,6 @@ const Sidebar = () => {
             <X size={24} />
           </button>
         </div>
-
         {/* Conteúdo do menu */}
         <div className="flex flex-col h-full">
           <nav className="flex-1 px-4 pt-6 space-y-2 overflow-y-auto">
@@ -80,7 +75,6 @@ const Sidebar = () => {
               </Link>
             ))}
           </nav>
-
           {/* Botão de sair */}
           <div className="px-4 py-4 shrink-0">
             <button
@@ -95,5 +89,4 @@ const Sidebar = () => {
     </>
   );
 };
-
 export default Sidebar;
