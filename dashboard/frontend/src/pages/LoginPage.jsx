@@ -15,6 +15,15 @@ const LoginPage = () => {
     e.preventDefault();
     setErro("");
     setCarregando(true);
+    
+    // Modo de desenvolvimento - bypass de autenticação para testes
+    if (import.meta.env.DEV) {
+      console.log("Modo de desenvolvimento: bypass de autenticação ativado");
+      localStorage.setItem("authToken", "dev-token-for-testing");
+      navigate("/dashboard");
+      return;
+    }
+    
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await axios.post(`${apiUrl}/auth/login`, {
@@ -29,6 +38,14 @@ const LoginPage = () => {
       setErro("Email ou senha incorretos.");
     }
     setCarregando(false);
+  };
+
+  // Função para acesso direto ao dashboard em ambiente de desenvolvimento
+  const acessarDashboardDev = () => {
+    if (import.meta.env.DEV) {
+      localStorage.setItem("authToken", "dev-token-for-testing");
+      navigate("/dashboard");
+    }
   };
 
   return (
@@ -88,6 +105,21 @@ const LoginPage = () => {
             Cadastre-se
           </span>
         </p>
+        
+        {/* Botão de acesso direto ao dashboard (apenas em ambiente de desenvolvimento) */}
+        {import.meta.env.DEV && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={acessarDashboardDev}
+              className="w-full bg-amber-500 text-white py-2 rounded-lg font-semibold hover:bg-amber-600"
+            >
+              Acessar Dashboard (Modo Dev)
+            </button>
+            <p className="text-xs text-center text-gray-500 mt-1">
+              Este botão só aparece em ambiente de desenvolvimento
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
