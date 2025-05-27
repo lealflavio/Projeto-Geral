@@ -19,7 +19,7 @@ class NotificationService:
 
 # Importações de modelos e autenticação
 # Ajuste conforme a estrutura real do projeto
-from .models import User, WorkOrder
+from ..models import User, WorkOrder
 from ..auth import get_current_user
 
 # Configurar logging
