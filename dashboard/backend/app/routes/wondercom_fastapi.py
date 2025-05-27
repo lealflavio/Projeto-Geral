@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 # Criar router - Removendo o prefixo da rota para que o FastAPI não duplique
 router = APIRouter(tags=["Wondercom"])
 
-# Modificando o caminho da rota para não incluir o prefixo /api/wondercom
-@router.post("/wondercom/allocate")
+# Corrigindo o caminho da rota para incluir o prefixo /api/wondercom
+@router.post("/api/wondercom/allocate")
 async def allocate_work_order(
     request: Request,
     current_user: User = Depends(get_current_user)
@@ -91,7 +91,7 @@ async def allocate_work_order(
         logger.error(f"Erro ao alocar WO {work_order_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/wondercom/calcular-kms")
+@router.post("/api/wondercom/calcular-kms")
 async def calcular_kms(
     request: Request,
     current_user: User = Depends(get_current_user)
