@@ -1,6 +1,7 @@
 """
 Cliente para comunicação com a VM API.
 Versão refatorada para ser compatível com FastAPI.
+Timeouts ajustados para operações longas do Selenium.
 """
 import os
 import logging
@@ -25,6 +26,12 @@ class VMApiClient:
         
         # URL base para callbacks - não depende mais do Flask request
         self.base_callback_url = base_callback_url or os.getenv('BACKEND_URL')
+        
+        # Timeouts configuráveis via variáveis de ambiente
+        self.timeout_allocate = int(os.getenv('VM_API_TIMEOUT_ALLOCATE', '120'))  # 2 minutos para alocação
+        self.timeout_process = int(os.getenv('VM_API_TIMEOUT_PROCESS', '30'))     # 30 segundos para processamento
+        self.timeout_status = int(os.getenv('VM_API_TIMEOUT_STATUS', '20'))       # 20 segundos para status
+        self.timeout_health = int(os.getenv('VM_API_TIMEOUT_HEALTH', '10'))       # 10 segundos para health check
         
         if not self.base_url:
             logger.error("VM_API_URL não configurada")
@@ -90,11 +97,17 @@ class VMApiClient:
                 data['callback_url'] = callback_url
         
         try:
+            # Timeout aumentado para 120 segundos (2 minutos) para acomodar operações longas do Selenium
+            # Usa timeout menor para processamento assíncrono
+            timeout = self.timeout_process if async_processing else self.timeout_allocate
+            
+            logger.info(f"Alocando WO {work_order_id} com timeout de {timeout} segundos")
+            
             response = requests.post(
                 url,
                 json=data,
                 headers=self._get_headers(),
-                timeout=30 if not async_processing else 10
+                timeout=timeout
             )
             
             response.raise_for_status()
@@ -137,7 +150,7 @@ class VMApiClient:
                 url,
                 json=data,
                 headers=self._get_headers(),
-                timeout=10
+                timeout=self.timeout_process
             )
             
             response.raise_for_status()
@@ -164,7 +177,7 @@ class VMApiClient:
             response = requests.get(
                 url,
                 headers=self._get_headers(),
-                timeout=10
+                timeout=self.timeout_status
             )
             
             response.raise_for_status()
@@ -187,7 +200,7 @@ class VMApiClient:
         try:
             response = requests.get(
                 url,
-                timeout=5
+                timeout=self.timeout_health
             )
             
             response.raise_for_status()
