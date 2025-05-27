@@ -82,7 +82,7 @@ const LoginPage = () => {
           {erro && <p className="text-danger text-sm">{erro}</p>}
           <button
             type="submit"
-            className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-primary/90"
+            className="w-full bg-primary text-card py-2 rounded-lg font-semibold hover:bg-opacity-90"
             disabled={carregando}
           >
             {carregando ? "Entrando..." : "Entrar"}
@@ -111,11 +111,11 @@ const LoginPage = () => {
           <div className="mt-4 pt-4 border-t border-gray-200">
             <button
               onClick={acessarDashboardDev}
-              className="w-full bg-amber-500 text-white py-2 rounded-lg font-semibold hover:bg-amber-600"
+              className="w-full bg-amber-500 text-card py-2 rounded-lg font-semibold hover:bg-amber-600"
             >
               Acessar Dashboard (Modo Dev)
             </button>
-            <p className="text-xs text-center text-gray-500 mt-1">
+            <p className="text-xs text-center text-muted mt-1">
               Este botão só aparece em ambiente de desenvolvimento
             </p>
           </div>
