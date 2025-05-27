@@ -34,11 +34,11 @@ const Sidebar = () => {
   
   return (
     <>
-      {/* Botão mobile de abrir menu */}
+      {/* Botão mobile de abrir menu - Agora apenas com ícone hambúrguer tradicional */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button 
           onClick={() => setOpen(true)}
-          className="bg-primary-500 text-white p-sm rounded-md shadow-md"
+          className="text-[#333]"
         >
           <Menu size={28} />
         </button>
@@ -54,16 +54,15 @@ const Sidebar = () => {
       
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-card shadow-lg transform transition-all duration-normal ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:static md:shadow-md`}
+        } md:translate-x-0 md:static md:shadow-none`}
       >
         {/* Header mobile */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-card-border md:hidden">
-          <h2 className="text-lg font-semibold text-text">Menu</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b md:hidden">
+          <h2 className="text-lg font-semibold text-[#333]">Menu</h2>
           <button 
             onClick={() => setOpen(false)}
-            className="text-muted hover:text-text transition-colors duration-fast"
           >
             <X size={24} />
           </button>
@@ -76,10 +75,10 @@ const Sidebar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-fast ${
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
                   location.pathname === link.path
-                    ? "bg-primary-500 text-white"
-                    : "text-text hover:bg-secondary"
+                    ? "bg-[#F5F4FF] text-[#6C63FF]"
+                    : "text-[#333] hover:bg-[#EDE9FE]"
                 }`}
                 onClick={() => setOpen(false)}
               >
@@ -89,11 +88,11 @@ const Sidebar = () => {
             ))}
           </nav>
           
-          {/* Botão de sair - Corrigido para ser visível em mobile */}
-          <div className="px-4 py-4 shrink-0 sticky bottom-0 bg-card border-t border-card-border">
+          {/* Botão de sair - Agora com a cor primária */}
+          <div className="px-4 py-4 shrink-0 sticky bottom-0 bg-white border-t">
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 bg-danger text-white py-2 px-4 rounded-lg font-semibold shadow hover:bg-danger-dark transition-colors duration-fast"
+              className="w-full flex items-center justify-center gap-2 bg-[#6C63FF] text-white py-2 px-4 rounded-xl font-semibold shadow hover:bg-[#5A52E0] transition"
             >
               <LogOut size={18} />
               <span>Sair</span>

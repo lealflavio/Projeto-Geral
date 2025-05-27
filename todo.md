@@ -19,5 +19,5 @@
 ## Finalização
 - [x] Revisar todas as páginas para garantir consistência
 - [x] Testar responsividade em diferentes dispositivos
-- [ ] Criar pull request para a branch master
-- [ ] Reportar alterações ao usuário
+- [x] Criar pull request para a branch master
+- [x] Reportar alterações ao usuário
