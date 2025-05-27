@@ -1,4 +1,3 @@
-// tailwind.config.js
 module.exports = {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
@@ -6,10 +5,9 @@ module.exports = {
       colors: {
         // padronizacao-cores-variaveis
         // Cores principais do sistema
-        primary: "#6C63FF",       // botão principal, destaque
-        secondary: "#ECEBFF",     // plano de fundo leve
-        primary: "#0071E3",       // botão principal, destaque
-        secondary: "#E3F2FF",     // plano de fundo leve
+        primary: "#0071E3",       // botão principal, destaque (Azul vibrante)
+        secondary: "#E3F2FF",     // plano de fundo leve (Azul claro suave)
+        
         // master
         background: "#FAFAFA",    // fundo geral
         text: "#2E2E2E",          // texto principal
@@ -17,7 +15,7 @@ module.exports = {
         card: "#FFFFFF",          // fundo dos cards
         danger: "#FF6F61",        // sair ou erros
         
-        // Cores do dashboard
+        // Cores do dashboard (mantendo as outras cores conforme estavam)
         emerald: {
           50: "#ECFDF5",
           100: "#D1FAE5",
@@ -29,18 +27,6 @@ module.exports = {
           700: "#047857",
           800: "#065F46",
           900: "#064E3B",
-        },
-        purple: {
-          50: "#F5F3FF",
-          100: "#EDE9FE",
-          200: "#DDD6FE",
-          300: "#C4B5FD",
-          400: "#A78BFA",
-          500: "#8B5CF6",
-          600: "#7C3AED",
-          700: "#6D28D9",
-          800: "#5B21B6",
-          900: "#4C1D95",
         },
         blue: {
           50: "#EFF6FF",
