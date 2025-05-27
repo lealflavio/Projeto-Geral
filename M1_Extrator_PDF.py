@@ -1,42 +1,8 @@
-#!/usr/bin/env python3
-"""
-Extrator de dados de PDFs de intervenção
-
-Este script extrai dados relevantes de PDFs de intervenção e os salva em formato JSON.
-Refatorado para usar caminhos relativos através do sistema centralizado de configurações.
-"""
-
 import subprocess
 import logging
 import re
 import os
 import json
-import sys
-
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('extrator_pdf')
-
-# Adicionar diretório raiz ao path para importação
-try:
-    # Determinar o diretório base do projeto
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, current_dir)
-except Exception as e:
-    logger.error(f"Erro ao configurar path: {str(e)}")
-
-# Importar utilitários de caminho
-try:
-    from config.path_utils import get_path, join_path, ensure_dir_exists
-    USING_PATH_UTILS = True
-except ImportError:
-    logger.warning("Utilitários de caminho não encontrados. Usando caminhos padrão.")
-    USING_PATH_UTILS = False
-    # Definir caminho padrão para compatibilidade
-    DEFAULT_EXTRACAO_DIR = "/home/flavioleal_souza/Sistema/extracao_dados"
 
 # Função de extração do valor após um rótulo específico
 def extrair_valor_apos_rotulo(texto, rotulo):
@@ -56,12 +22,11 @@ def extrair_secao_multilinha(texto, inicio, fim=None):
         logging.error(f"Erro ao extrair seção {inicio}: {e}")
         return None
 
-# Função para extrair os equipamentos entregues
+# Função para extrair os equipamentos entregues ou recolhidos
 def extrair_equipamentos(texto):
     equipamentos = []
     linhas = texto.splitlines()
     for linha in linhas:
-        # Ajuste para pegar a descrição do equipamento e serial number
         if "Serial Number" in linha:
             equipamentos.append(" ".join(linha.split()))
     return equipamentos
@@ -72,20 +37,16 @@ def extrair_materiais(texto):
     linhas = texto.splitlines()
     for linha in linhas:
         if linha.strip() and len(linha.split()) > 1:
-            # Limpeza para garantir que não haja espaços extras
             campos = linha.split()
-            # Garantir que o valor da quantidade seja um número inteiro, sem casas decimais
             try:
                 descricao = " ".join(campos[:-1])
                 quantidade = float(campos[-1])
-                # Se quantidade for um número inteiro, removemos a parte decimal
                 if quantidade.is_integer():
                     quantidade = int(quantidade)
                 materiais.append(f"{descricao} {quantidade}")
             except ValueError:
-                continue  # Se não conseguir converter para número, ignora a linha
+                continue
     return materiais
-
 
 # Função principal para extrair dados de um PDF
 def extrair_dados_pdf_relevantes(caminho_pdf):
@@ -93,6 +54,7 @@ def extrair_dados_pdf_relevantes(caminho_pdf):
         "dados_intervencao": {},
         "observacoes_tecnico": None,
         "equipamentos_entregues": [],
+        "equipamentos_recolhidos": [],
         "materiais_usados": []
     }
 
@@ -120,63 +82,55 @@ def extrair_dados_pdf_relevantes(caminho_pdf):
     # Extrair Observações do Técnico
     dados_relevantes["observacoes_tecnico"] = extrair_secao_multilinha(texto_completo, "Observações do Técnico", "Equipamentos")
     if not dados_relevantes["observacoes_tecnico"]:
-         dados_relevantes["observacoes_tecnico"] = extrair_secao_multilinha(texto_completo, "Observações do Técnico", "Questionário do cliente")
+        dados_relevantes["observacoes_tecnico"] = extrair_secao_multilinha(texto_completo, "Observações do Técnico", "Questionário do cliente")
     if not dados_relevantes["observacoes_tecnico"]:
-         dados_relevantes["observacoes_tecnico"] = extrair_secao_multilinha(texto_completo, "Observações do Técnico")
+        dados_relevantes["observacoes_tecnico"] = extrair_secao_multilinha(texto_completo, "Observações do Técnico")
 
-    # Extrair Equipamentos Entregues
+    # Extrair Equipamentos
     secao_equipamentos_texto = extrair_secao_multilinha(texto_completo, "Equipamentos", "Materiais")
     if not secao_equipamentos_texto:
         secao_equipamentos_texto = extrair_secao_multilinha(texto_completo, "Equipamentos", "Questionário do cliente")
     if not secao_equipamentos_texto:
         secao_equipamentos_texto = extrair_secao_multilinha(texto_completo, "Equipamentos")
-        
+
     if secao_equipamentos_texto:
-        match_entregues = re.search(r"Entregues(.*?)(Recolhidos|\Z|Materiais|Questionário do cliente)", secao_equipamentos_texto, re.DOTALL | re.IGNORECASE)
+        # Entregues
+        match_entregues = re.search(r"Entregues(.*?)(Recolhidos|Materiais|Questionário do cliente|\Z)", secao_equipamentos_texto, re.DOTALL | re.IGNORECASE)
         if match_entregues:
             texto_equip_entregues = match_entregues.group(1).strip()
             dados_relevantes["equipamentos_entregues"] = extrair_equipamentos(texto_equip_entregues)
         else:
             dados_relevantes["equipamentos_entregues"] = extrair_equipamentos(secao_equipamentos_texto)
 
+        # Recolhidos
+        match_recolhidos = re.search(r"Recolhidos(.*?)(Entregues|Materiais|Questionário do cliente|\Z)", secao_equipamentos_texto, re.DOTALL | re.IGNORECASE)
+        if match_recolhidos:
+            texto_equip_recolhidos = match_recolhidos.group(1).strip()
+            dados_relevantes["equipamentos_recolhidos"] = extrair_equipamentos(texto_equip_recolhidos)
+
     # Extrair Materiais Usados
     secao_materiais_texto = extrair_secao_multilinha(texto_completo, "Materiais", "Questionário do cliente")
     if not secao_materiais_texto:
         secao_materiais_texto = extrair_secao_multilinha(texto_completo, "Materiais")
-        
+
     if secao_materiais_texto:
         dados_relevantes["materiais_usados"] = extrair_materiais(secao_materiais_texto)
 
-    # Limpar chaves vazias em dados_intervencao
+    # Limpar chaves vazias
     dados_relevantes["dados_intervencao"] = {k: v for k, v in dados_relevantes["dados_intervencao"].items() if v is not None}
 
-    # Criar diretório para salvar os arquivos se não existir
-    if USING_PATH_UTILS:
-        # Usar utilitários de caminho para obter o diretório de saída
-        saida_dir = join_path('extracao_dados_dir', create=True)
-    else:
-        # Fallback para caminho absoluto
-        saida_dir = DEFAULT_EXTRACAO_DIR
-        os.makedirs(saida_dir, exist_ok=True)
+    # Criar diretório de saída
+    saida_dir = "/home/flavioleal_souza/Sistema/extracao_dados"
+    os.makedirs(saida_dir, exist_ok=True)
 
-    # Salvar os dados extraídos em um arquivo JSON
+    # Salvar JSON
     nome_pdf = os.path.basename(caminho_pdf).replace('.pdf', '')
     caminho_saida = os.path.join(saida_dir, f"{nome_pdf}_dados.json")
-    
+
     with open(caminho_saida, "w", encoding="utf-8") as f_out:
         json.dump(dados_relevantes, f_out, indent=2, ensure_ascii=False)
-    
+
     logging.info(f"Dados extraídos salvos em: {caminho_saida}")
     return dados_relevantes
-
-# Exemplo de uso
-if __name__ == "__main__":
-    import argparse
     
-    # Configurar parser de argumentos
-    parser = argparse.ArgumentParser(description='Extrator de dados de PDFs de intervenção')
-    parser.add_argument('pdf', help='Caminho para o arquivo PDF')
-    args = parser.parse_args()
     
-    # Extrair dados do PDF
-    extrair_dados_pdf_relevantes(args.pdf)
