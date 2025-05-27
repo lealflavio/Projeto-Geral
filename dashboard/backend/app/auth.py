@@ -1,10 +1,8 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import json
-import logging
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
@@ -14,15 +12,6 @@ from . import models, schemas, database
 import secrets
 
 load_dotenv()
-
-# Configurar logging detalhado
-logger = logging.getLogger("auth_debug")
-logger.setLevel(logging.DEBUG)
-# Garantir que o logger tenha um handler para console
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
 
 # --- Configurações de segurança ---
 SECRET_KEY = os.getenv("SECRET_KEY", "a_very_secret_key_for_dev_only_0123456789abcdef")
@@ -63,46 +52,25 @@ def authenticate_user(db: Session, email: str, password: str):
         return False
     return user
 
-# --- Dependências de autenticação com logs detalhados ---
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db), request: Request = None):
+# --- Dependências de autenticação ---
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
-    # Log da rota atual
-    if request:
-        logger.debug(f"Autenticando requisição para: {request.url.path}")
-        logger.debug(f"Headers da requisição: {dict(request.headers)}")
-    
-    logger.debug(f"Iniciando validação de token: {token[:15]}...")
-    
     try:
-        logger.debug(f"Tentando decodificar token com SECRET_KEY: {SECRET_KEY[:5]}...")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        logger.debug(f"Token decodificado com sucesso. Payload: {json.dumps(payload)}")
-        
         email: str = payload.get("sub")
-        logger.debug(f"Email extraído do token: {email}")
-        
         if email is None:
-            logger.error("Campo 'sub' não encontrado no payload do token")
             raise credentials_exception
-            
         token_data = schemas.TokenData(email=email)
-        logger.debug(f"TokenData criado: {token_data}")
-        
-    except JWTError as e:
-        logger.error(f"Erro ao decodificar JWT: {str(e)}")
+    except JWTError:
         raise credentials_exception
 
     user = get_user_by_email(db, email=token_data.email)
     if user is None:
-        logger.error(f"Usuário com email {token_data.email} não encontrado no banco de dados")
         raise credentials_exception
-        
-    logger.debug(f"Usuário autenticado com sucesso: {user.email}")
     return user
 
 async def get_current_active_user(current_user: models.User = Depends(get_current_user)):
