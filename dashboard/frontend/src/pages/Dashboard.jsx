@@ -48,16 +48,16 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-red-50 p-6 rounded-lg text-red-700">
-          <h2 className="text-xl font-bold mb-4">Algo deu errado</h2>
-          <p className="mb-4">Ocorreu um erro ao carregar o dashboard.</p>
-          <p className="text-sm mb-4">{this.state.error && this.state.error.toString()}</p>
+        <div className="bg-danger-light p-lg rounded-lg text-danger-dark">
+          <h2 className="text-xl font-bold mb-md">Algo deu errado</h2>
+          <p className="mb-md">Ocorreu um erro ao carregar o dashboard.</p>
+          <p className="text-sm mb-md">{this.state.error && this.state.error.toString()}</p>
           <button
             onClick={() => {
               this.setState({ hasError: false });
               window.location.reload();
             }}
-            className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-sm transition-colors"
+            className="px-4 py-2 bg-danger-light hover:bg-danger text-danger-dark hover:text-white rounded-lg text-sm transition-all duration-normal"
           >
             Tentar novamente
           </button>
@@ -136,8 +136,8 @@ const DashboardContent = () => {
     };
   }, [isAutoRefresh, refetch]);
 
-  // Cores para gráficos
-  const COLORS = ['#7C3AED', '#9F7AEA', '#B794F4', '#D6BCFA'];
+  // Cores para gráficos - usando as cores do tema
+  const COLORS = ['#6C63FF', '#8A83FF', '#B7B3FF', '#D8D6FF'];
   
   // Formatação de data/hora da última atualização
   const formatLastUpdated = (timestamp) => {
@@ -149,7 +149,7 @@ const DashboardContent = () => {
   // Componente de card animado
   const AnimatedCard = ({ icon, label, value, color, gradient }) => (
     <motion.div
-      className={`bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all ${gradient}`}
+      className={`bg-card p-lg rounded-xl shadow-card hover:shadow-card-hover transition-all duration-normal ${gradient}`}
       whileHover={{ y: -5 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -157,10 +157,10 @@ const DashboardContent = () => {
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-sm text-muted">{label}</p>
           <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
         </div>
-        <div className={`p-3 rounded-full ${gradient} text-white`}>
+        <div className={`p-sm rounded-full ${gradient} text-white`}>
           {icon}
         </div>
       </div>
@@ -170,17 +170,17 @@ const DashboardContent = () => {
   // Componente de atividade recente
   const ActivityItem = ({ tipo, descricao, tempo }) => (
     <motion.div 
-      className="border-b border-gray-100 py-3 last:border-0"
+      className="border-b border-card-border py-sm last:border-0"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
     >
       <div className="flex justify-between items-start">
         <div>
-          <p className="font-medium text-gray-800">{tipo}</p>
-          <p className="text-sm text-gray-500">{descricao}</p>
+          <p className="font-medium text-text-dark">{tipo}</p>
+          <p className="text-sm text-muted">{descricao}</p>
         </div>
-        <span className="text-xs text-gray-400 flex items-center">
+        <span className="text-xs text-muted-light flex items-center">
           <Clock size={12} className="mr-1" />
           {tempo}
         </span>
@@ -191,8 +191,8 @@ const DashboardContent = () => {
   // Componente de alerta
   const AlertItem = ({ tipo, mensagem }) => (
     <motion.div 
-      className={`p-3 rounded-lg mb-3 flex items-center ${
-        tipo === 'aviso' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
+      className={`p-sm rounded-lg mb-sm flex items-center ${
+        tipo === 'aviso' ? 'bg-warning-light text-warning-dark' : 'bg-info-light text-info-dark'
       }`}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -210,34 +210,34 @@ const DashboardContent = () => {
   // Componente de ação rápida
   const QuickAction = ({ icon, label, onClick }) => (
     <motion.button
-      className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all"
+      className="flex flex-col items-center justify-center p-md bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-normal"
       whileHover={{ y: -2, scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
     >
-      <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white mb-2">
+      <div className="p-sm rounded-full bg-primary-500 text-white mb-2">
         {icon}
       </div>
-      <span className="text-xs text-gray-700">{label}</span>
+      <span className="text-xs text-text">{label}</span>
     </motion.button>
   );
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="bg-red-50 p-4 rounded-lg text-red-700">
+      <div className="bg-danger-light p-md rounded-lg text-danger-dark">
         <p className="font-medium">Erro ao carregar dados</p>
         <p className="text-sm">{error?.message || 'Tente novamente mais tarde'}</p>
         <button 
           onClick={() => refetch()} 
-          className="mt-2 px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-sm transition-colors"
+          className="mt-2 px-4 py-2 bg-danger-light hover:bg-danger text-danger-dark hover:text-white rounded-lg text-sm transition-colors duration-normal"
         >
           Tentar novamente
         </button>
@@ -246,31 +246,29 @@ const DashboardContent = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho com título e controles */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
-        
-        <div className="flex items-center space-x-4">
-          <div className="text-xs text-gray-500">
+    <div className="space-y-lg">
+      {/* Cabeçalho com controles - Removido título duplicado */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-md">
+        <div className="flex items-center space-x-md">
+          <div className="text-xs text-muted">
             Última atualização: {formatLastUpdated(dataUpdatedAt)}
           </div>
           
           <div className="flex items-center">
             <button 
               onClick={() => refetch()}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-sm rounded-lg hover:bg-secondary transition-colors duration-fast"
               title="Atualizar dados"
             >
-              <RefreshCw size={18} className="text-gray-600" />
+              <RefreshCw size={18} className="text-text" />
             </button>
             
-            <div className="flex items-center ml-4">
-              <span className="text-xs text-gray-500 mr-2">Auto</span>
+            <div className="flex items-center ml-md">
+              <span className="text-xs text-muted mr-2">Auto</span>
               <button
                 onClick={() => setIsAutoRefresh(!isAutoRefresh)}
                 className={`relative inline-flex h-5 w-10 items-center rounded-full ${
-                  isAutoRefresh ? 'bg-purple-600' : 'bg-gray-200'
+                  isAutoRefresh ? 'bg-primary-500' : 'bg-muted-light'
                 }`}
               >
                 <span
@@ -286,7 +284,7 @@ const DashboardContent = () => {
 
       {/* Alertas */}
       {data?.alertas && data.alertas.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-lg">
           {data.alertas.map((alerta) => (
             <AlertItem key={alerta.id} tipo={alerta.tipo} mensagem={alerta.mensagem} />
           ))}
@@ -294,40 +292,40 @@ const DashboardContent = () => {
       )}
 
       {/* KPIs principais */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <AnimatedCard 
           icon={<CheckCircle size={24} />}
           label="WOs Finalizadas" 
           value={data?.wosFinalizadas || 0}
-          color="text-emerald-600"
-          gradient="bg-gradient-to-r from-emerald-50 to-teal-50"
+          color="text-success"
+          gradient="bg-success-light"
         />
         <AnimatedCard 
           icon={<CreditCard size={24} />}
           label="Créditos Atuais" 
           value={data?.creditosAtuais || 0}
-          color="text-purple-600"
-          gradient="bg-gradient-to-r from-purple-50 to-indigo-50"
+          color="text-primary-500"
+          gradient="bg-primary-100"
         />
         <AnimatedCard 
           icon={<DollarSign size={24} />}
           label="Ganhos Estimados" 
           value={`€${data?.ganhosEstimados || 0}`}
-          color="text-blue-600"
-          gradient="bg-gradient-to-r from-blue-50 to-cyan-50"
+          color="text-info"
+          gradient="bg-info-light"
         />
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg mt-xl">
         {/* Tendência de WOs */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-lg rounded-xl shadow-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Tendência de WOs Finalizadas</h2>
+          <h2 className="text-lg font-medium text-text-dark mb-md">Tendência de WOs Finalizadas</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.tendenciaWOs || []}>
@@ -338,10 +336,10 @@ const DashboardContent = () => {
                 <Line 
                   type="monotone" 
                   dataKey="quantidade" 
-                  stroke="#7C3AED" 
+                  stroke="#6C63FF" 
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "#7C3AED" }}
-                  activeDot={{ r: 6, fill: "#7C3AED" }}
+                  dot={{ r: 4, fill: "#6C63FF" }}
+                  activeDot={{ r: 6, fill: "#6C63FF" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -350,12 +348,12 @@ const DashboardContent = () => {
 
         {/* Distribuição de Ganhos */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-lg rounded-xl shadow-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Distribuição de Ganhos</h2>
+          <h2 className="text-lg font-medium text-text-dark mb-md">Distribuição de Ganhos</h2>
           <div className="h-64 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -382,16 +380,16 @@ const DashboardContent = () => {
       </div>
 
       {/* Seção inferior: Atividades Recentes e Ações Rápidas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg mt-xl">
         {/* Atividades Recentes */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md lg:col-span-2"
+          className="bg-card p-lg rounded-xl shadow-card lg:col-span-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Atividades Recentes</h2>
-          <div className="divide-y divide-gray-100">
+          <h2 className="text-lg font-medium text-text-dark mb-md">Atividades Recentes</h2>
+          <div className="divide-y divide-card-border">
             {data?.atividadesRecentes?.map((atividade) => (
               <ActivityItem 
                 key={atividade.id}
@@ -405,13 +403,13 @@ const DashboardContent = () => {
 
         {/* Ações Rápidas */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-lg rounded-xl shadow-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Ações Rápidas</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <h2 className="text-lg font-medium text-text-dark mb-md">Ações Rápidas</h2>
+          <div className="grid grid-cols-2 gap-md">
             <QuickAction 
               icon={<Activity size={20} />}
               label="Alocar WO"
