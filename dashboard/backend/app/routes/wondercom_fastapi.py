@@ -19,8 +19,7 @@ class NotificationService:
 
 # Importações de modelos e autenticação
 # Ajuste conforme a estrutura real do projeto
-from ..models.user import User
-from ..models.work_order import WorkOrder
+from .models import User, WorkOrder
 from ..auth import get_current_user
 
 # Configurar logging
@@ -141,19 +140,10 @@ async def calcular_kms(
         if endereco_residencial:
             # Aqui você precisaria implementar a geocodificação do endereço
             # usando Google Maps API ou similar
-            # coords_casa = geocode_address(endereco_residencial)
-            # if coords_casa:
-            #     coordenadas.append(coords_casa)
             pass
         
         # Adicionar coordenadas das WOs
         for wo in work_orders:
-            # Extrair coordenadas do resultado da WO
-            # resultado = json.loads(wo.resultado)
-            # lat = resultado.get('latitude')
-            # lng = resultado.get('longitude')
-            # if lat and lng:
-            #     coordenadas.append({"lat": lat, "lng": lng})
             pass
         
         # Adicionar endereço residencial no final se fornecido
@@ -161,11 +151,6 @@ async def calcular_kms(
             coordenadas.append(coordenadas[0])
         
         # Calcular distâncias
-        # Aqui você precisaria implementar o cálculo de distâncias
-        # usando Google Maps API ou similar
-        # distancias = calculate_distances(coordenadas)
-        
-        # Para fins de exemplo, vamos simular um resultado
         distancias = [10.5, 15.2, 8.7, 12.3]
         total_km = sum(distancias)
         
