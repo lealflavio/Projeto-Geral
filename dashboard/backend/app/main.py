@@ -54,7 +54,8 @@ app.add_middleware(
 app.include_router(auth_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(usuarios_routes.router)
-app.include_router(wondercom_router)  # Usar o router FastAPI do Wondercom
+# Incluir o router Wondercom com o prefixo /api para manter compatibilidade com o frontend
+app.include_router(wondercom_router, prefix="/api")
 
 @app.on_event("startup")
 def on_startup():
