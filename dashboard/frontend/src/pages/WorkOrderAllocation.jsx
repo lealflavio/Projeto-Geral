@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, Share2, Download, Clipboard, ArrowRight, Copy, Navigation } from "lucide-react";
+import { Search, MapPin, Share2, Clipboard, ArrowRight } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
 
@@ -160,11 +160,11 @@ const WorkOrderAllocation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
-  const [showMap, setShowMap] = useState(false);
-  const [showMapOptions, setShowMapOptions] = useState(false);
   const [usuario, setUsuario] = useState(null);
   const [historicoWOs, setHistoricoWOs] = useState([]);
   const [copiedField, setCopiedField] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [showCompletionEffect, setShowCompletionEffect] = useState(false);
 
   // Carrega sempre o usuário atualizado da API ao montar o componente
   useEffect(() => {
@@ -195,6 +195,35 @@ const WorkOrderAllocation = () => {
     // Carregar histórico de WOs
     setHistoricoWOs(obterHistoricoWOs());
   }, []);
+
+  // Efeito para simular o progresso durante a busca
+  useEffect(() => {
+    let progressInterval;
+    
+    if (isSearching) {
+      setProgress(0);
+      
+      // Simular progresso ao longo de 60 segundos
+      progressInterval = setInterval(() => {
+        setProgress(prevProgress => {
+          // Aumentar o progresso de forma não linear para parecer mais natural
+          const newProgress = prevProgress + (100 - prevProgress) / 60;
+          return newProgress >= 99 ? 99 : newProgress;
+        });
+      }, 1000);
+    } else if (progress > 0 && progress < 100) {
+      // Quando a busca termina, completar o progresso e mostrar efeito
+      setProgress(100);
+      setTimeout(() => {
+        setShowCompletionEffect(true);
+        setTimeout(() => setShowCompletionEffect(false), 1000);
+      }, 300);
+    }
+    
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
+  }, [isSearching, progress]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -344,31 +373,17 @@ const WorkOrderAllocation = () => {
     }
   };
 
-  const abrirMapa = (app) => {
+  const abrirMapa = () => {
     if (!searchResult) return;
     
     const { lat, lng } = searchResult.coordenadas;
-    let url = '';
+    // Usar a API de geolocalização do navegador para abrir o app de mapas padrão do dispositivo
+    window.open(`geo:${lat},${lng}?q=${lat},${lng}`, '_system');
     
-    switch(app) {
-      case 'google':
-        url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-        break;
-      case 'waze':
-        url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-        break;
-      case 'apple':
-        url = `http://maps.apple.com/?ll=${lat},${lng}`;
-        break;
-      case 'osm':
-        url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}`;
-        break;
-      default:
-        url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    // Fallback para navegadores desktop ou que não suportam o protocolo geo:
+    if (!navigator.userAgent.match(/Android|iPhone|iPad|iPod/i)) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
     }
-    
-    window.open(url, '_blank');
-    setShowMapOptions(false);
   };
 
   return (
@@ -412,8 +427,22 @@ const WorkOrderAllocation = () => {
                 </>
               )}
             </button>
+            <p className="text-xs text-[#777] mt-1 text-center md:text-left">Esse processo costuma levar 1 minuto</p>
           </div>
         </div>
+        
+        {/* Barra de progresso */}
+        {isSearching && (
+          <div className="mt-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+              <div 
+                className="bg-[#7C3AED] h-2.5 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-[#777] text-right">{Math.round(progress)}%</p>
+          </div>
+        )}
       </div>
       
       {/* Histórico de WOs */}
@@ -440,7 +469,12 @@ const WorkOrderAllocation = () => {
       
       {/* Resultado da busca */}
       {searchResult && (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className={`bg-white rounded-xl shadow overflow-hidden relative ${showCompletionEffect ? 'animate-pulse' : ''}`}>
+          {/* Efeito de conclusão */}
+          {showCompletionEffect && (
+            <div className="absolute inset-0 bg-purple-100 opacity-30 animate-ping rounded-xl"></div>
+          )}
+          
           {/* Cabeçalho */}
           <div className="bg-[#7C3AED] p-4 text-white flex justify-between items-center">
             <div>
@@ -454,13 +488,6 @@ const WorkOrderAllocation = () => {
                 title="Compartilhar"
               >
                 <Share2 size={20} />
-              </button>
-              <button
-                className="p-2 rounded-full hover:bg-purple-700 transition"
-                onClick={() => alert('Download do PDF iniciado')}
-                title="Baixar PDF"
-              >
-                <Download size={20} />
               </button>
             </div>
           </div>
@@ -499,7 +526,7 @@ const WorkOrderAllocation = () => {
                 </div>
                 
                 {/* Morada */}
-                <div className="mb-6">
+                <div className="mb-2">
                   <h3 className="text-sm text-[#777] mb-1">Morada</h3>
                   <div className="flex items-start gap-2">
                     <p className="text-[#333] flex-1">{searchResult.morada}</p>
@@ -513,123 +540,58 @@ const WorkOrderAllocation = () => {
                   </div>
                 </div>
                 
-                {/* Informações */}
-                <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-[#555] mb-3">Informações</h3>
-                  
-                  <div className="mb-2">
-                    <span className="text-xs text-[#777]">Acesso</span>
-                    <p className="text-[#333] font-medium">{searchResult.acesso}</p>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <span className="text-xs text-[#777]">Nº de Box</span>
-                    <p className="text-[#333] font-medium">{searchResult.numBox}</p>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <span className="text-xs text-[#777]">Tipo de Box</span>
-                    <p className="text-[#333] font-medium">{searchResult.tipoBox}</p>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <span className="text-xs text-[#777]">Instalar Telefone?</span>
-                    <p className="text-[#333] font-medium">{searchResult.telefone}</p>
-                  </div>
+                {/* Botão de mapa logo abaixo da morada */}
+                <div className="mb-6">
+                  <button
+                    className="flex items-center gap-2 text-[#7C3AED] hover:underline mt-2"
+                    onClick={abrirMapa}
+                  >
+                    <MapPin size={18} />
+                    <span>Ver no mapa</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                
+                {/* Acesso */}
+                <div className="mb-4">
+                  <h3 className="text-sm text-[#777] mb-1">Acesso</h3>
+                  <p className="text-[#333] font-medium">{searchResult.acesso}</p>
+                </div>
+                
+                {/* Nº de Box */}
+                <div className="mb-4">
+                  <h3 className="text-sm text-[#777] mb-1">Nº de Box</h3>
+                  <p className="text-[#333] font-medium">{searchResult.numBox}</p>
                 </div>
               </div>
               
               {/* Coluna 2 */}
               <div>
-                <div className="mb-6">
+                {/* Tipo de Box */}
+                <div className="mb-4">
+                  <h3 className="text-sm text-[#777] mb-1">Tipo de Box</h3>
+                  <p className="text-[#333] font-medium">{searchResult.tipoBox}</p>
+                </div>
+                
+                {/* Instalar Telefone? */}
+                <div className="mb-4">
+                  <h3 className="text-sm text-[#777] mb-1">Instalar Telefone?</h3>
+                  <p className="text-[#333] font-medium">{searchResult.telefone}</p>
+                </div>
+                
+                <div className="mb-4">
                   <h3 className="text-sm text-[#777] mb-1">Data de Agendamento</h3>
                   <p className="text-[#333]">{searchResult.dataAgendamento}</p>
                 </div>
                 
-                <div className="mb-6">
+                <div className="mb-4">
                   <h3 className="text-sm text-[#777] mb-1">Horário</h3>
                   <p className="text-[#333]">{searchResult.horario}</p>
-                </div>
-                
-                {/* Mapa - Melhorado com opções de aplicativos */}
-                <div className="mt-4">
-                  <button
-                    className="flex items-center gap-2 text-[#7C3AED] hover:underline"
-                    onClick={() => {
-                      setShowMap(!showMap);
-                      setShowMapOptions(false);
-                    }}
-                  >
-                    <MapPin size={18} />
-                    <span>{showMap ? 'Ocultar mapa' : 'Ver no mapa'}</span>
-                    <ArrowRight size={16} className={`transition-transform ${showMap ? 'rotate-90' : ''}`} />
-                  </button>
-                  
-                  {showMap && (
-                    <div className="mt-4 bg-gray-100 rounded-lg p-4 h-auto">
-                      <div className="text-center mb-4">
-                        <MapPin size={32} className="mx-auto mb-2 text-[#7C3AED]" />
-                        <p className="text-[#555] mb-4">
-                          Selecione um aplicativo para abrir as coordenadas
-                        </p>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <button
-                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
-                            onClick={() => abrirMapa('google')}
-                          >
-                            <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Google_Maps_icon_%282020%29.svg/120px-Google_Maps_icon_%282020%29.svg.png" 
-                              alt="Google Maps"
-                              className="w-8 h-8 mb-2"
-                            />
-                            <span className="text-sm">Google Maps</span>
-                          </button>
-                          
-                          <button
-                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
-                            onClick={() => abrirMapa('waze')}
-                          >
-                            <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Waze_logo.svg/120px-Waze_logo.svg.png" 
-                              alt="Waze"
-                              className="w-8 h-8 mb-2"
-                            />
-                            <span className="text-sm">Waze</span>
-                          </button>
-                          
-                          <button
-                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
-                            onClick={() => abrirMapa('apple')}
-                          >
-                            <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Apple_Maps_logo.svg/120px-Apple_Maps_logo.svg.png" 
-                              alt="Apple Maps"
-                              className="w-8 h-8 mb-2"
-                            />
-                            <span className="text-sm">Apple Maps</span>
-                          </button>
-                          
-                          <button
-                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
-                            onClick={() => abrirMapa('osm')}
-                          >
-                            <img 
-                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Openstreetmap_logo.svg/120px-Openstreetmap_logo.svg.png" 
-                              alt="OpenStreetMap"
-                              className="w-8 h-8 mb-2"
-                            />
-                            <span className="text-sm">OpenStreetMap</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
             
-            {/* Botões de ação - Removido "Alocar para Processamento" */}
+            {/* Botões de ação - Apenas Nova Busca */}
             <div className="mt-6 flex justify-center">
               <button
                 className="w-full md:w-1/2 border border-gray-200 py-2 rounded-lg text-[#555] hover:bg-gray-50 transition"
