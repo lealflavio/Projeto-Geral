@@ -38,7 +38,7 @@ const Sidebar = () => {
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button 
           onClick={() => setOpen(true)}
-          className="text-[#333]"
+          className="text-text"
         >
           <Menu size={28} />
         </button>
@@ -54,13 +54,13 @@ const Sidebar = () => {
       
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-card shadow-lg transform transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static md:shadow-none`}
       >
         {/* Header mobile */}
         <div className="flex items-center justify-between px-6 py-4 border-b md:hidden">
-          <h2 className="text-lg font-semibold text-[#333]">Menu</h2>
+          <h2 className="text-lg font-semibold text-text">Menu</h2>
           <button 
             onClick={() => setOpen(false)}
           >
@@ -77,8 +77,8 @@ const Sidebar = () => {
                 to={link.path}
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
                   location.pathname === link.path
-                    ? "bg-[#F5F4FF] text-[#6C63FF]"
-                    : "text-[#333] hover:bg-[#EDE9FE]"
+                    ? "bg-secondary text-primary"
+                    : "text-text hover:bg-secondary"
                 }`}
                 onClick={() => setOpen(false)}
               >
@@ -89,10 +89,10 @@ const Sidebar = () => {
           </nav>
           
           {/* Botão de sair - Agora com a cor primária */}
-          <div className="px-4 py-4 shrink-0 sticky bottom-0 bg-white border-t">
+          <div className="px-4 py-4 shrink-0 sticky bottom-0 bg-card border-t">
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 bg-[#6C63FF] text-white py-2 px-4 rounded-xl font-semibold shadow hover:bg-[#5A52E0] transition"
+              className="w-full flex items-center justify-center gap-2 bg-primary text-card py-2 px-4 rounded-xl font-semibold shadow hover:bg-opacity-90 transition"
             >
               <LogOut size={18} />
               <span>Sair</span>

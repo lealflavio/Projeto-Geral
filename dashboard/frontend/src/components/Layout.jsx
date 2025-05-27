@@ -50,18 +50,18 @@ const Layout = () => {
   }, [lastScrollY]);
 
   return (
-    <div className="flex h-screen bg-[#FAFAFA]">
+    <div className="flex h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Topbar Mobile - Agora desaparece ao rolar */}
         <div 
-          className={`md:hidden flex items-center px-4 py-3 bg-white shadow-sm z-10 transition-transform duration-300 ${
+          className={`md:hidden flex items-center px-4 py-3 bg-card shadow-sm z-10 transition-transform duration-300 ${
             showTopbar ? 'transform-none' : '-translate-y-full'
           }`}
           style={{ position: 'sticky', top: 0 }}
         >
           <div className="flex items-center justify-center w-full">
-            <h1 className="text-xl font-semibold text-[#2E2E2E] mx-auto">{pageTitle}</h1>
+            <h1 className="text-xl font-semibold text-text mx-auto">{pageTitle}</h1>
           </div>
         </div>
 
