@@ -174,9 +174,20 @@ const WorkOrderAllocation = () => {
     setIsSearching(true);
 
     try {
+      // Obter token de autenticação
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("Token de autenticação não encontrado. Faça login novamente.");
+        setIsSearching(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/wondercom/allocate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Incluir token de autenticação
+        },
         body: JSON.stringify({
           work_order_id: searchTerm,
           credentials: {
@@ -185,6 +196,18 @@ const WorkOrderAllocation = () => {
           }
         })
       });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert("Sessão expirada. Por favor, faça login novamente.");
+          // Redirecionar para login ou limpar token
+          localStorage.removeItem("authToken");
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       if (data.status === 'success' && data.data) {
         // Extrair informações do cliente
