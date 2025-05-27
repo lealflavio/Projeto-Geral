@@ -4,10 +4,9 @@ import os
 from .database import engine, Base
 from .routes import auth as auth_routes
 from .routes import dashboard as dashboard_routes
-from .routes import usuarios as usuarios_routes
-# Importar o novo router FastAPI em vez do Flask
-# Certifique-se de que o arquivo wondercom_fastapi.py esteja no diretório routes
-from .routes.wondercom_fastapi import router as wondercom_router
+# Importar as versões com debug para diagnóstico
+from .routes.usuarios_debug import router as usuarios_router
+from .routes.wondercom_fastapi_debug import router as wondercom_router
 
 # Configuração de domínios permitidos para CORS
 # Em produção, especifique explicitamente todos os domínios necessários
@@ -53,7 +52,7 @@ app.add_middleware(
 
 app.include_router(auth_routes.router)
 app.include_router(dashboard_routes.router)
-app.include_router(usuarios_routes.router)
+app.include_router(usuarios_router)
 # Incluir o router Wondercom com o prefixo /api para manter compatibilidade com o frontend
 app.include_router(wondercom_router, prefix="/api")
 
