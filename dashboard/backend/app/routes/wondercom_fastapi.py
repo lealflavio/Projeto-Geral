@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 import re
 import logging
+import json
 from typing import Dict, Any, Optional
 
 # Importação corrigida para o VMApiClient
@@ -20,10 +21,17 @@ class NotificationService:
 # Importações de modelos e autenticação
 # Ajuste conforme a estrutura real do projeto
 from ..models import User, WO as WorkOrder
-from ..auth import get_current_user
+# Importar a versão com debug para diagnóstico
+from ..auth_debug import get_current_user
 
 # Configurar logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("wondercom_debug")
+logger.setLevel(logging.DEBUG)
+# Garantir que o logger tenha um handler para console
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
 # Criar router - Removendo o prefixo da rota para que o FastAPI não duplique
 router = APIRouter(tags=["Wondercom"])
@@ -37,27 +45,39 @@ async def allocate_work_order(
     """
     Endpoint para alocação de ordem de trabalho no portal Wondercom.
     """
+    logger.debug(f"Requisição recebida para alocação de WO. URL: {request.url}")
+    logger.debug(f"Headers da requisição: {dict(request.headers)}")
+    
     if not current_user:
+        logger.error("Usuário não encontrado após autenticação")
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
+    logger.debug(f"Usuário autenticado: {current_user.email}")
+    
     if not current_user.usuario_portal or not current_user.senha_portal:
+        logger.error(f"Usuário {current_user.email} não tem credenciais do portal configuradas")
         raise HTTPException(status_code=400, detail="Configuração com portal não configurada")
     
     try:
         data = await request.json()
-    except Exception:
+        logger.debug(f"Dados recebidos: {json.dumps(data)}")
+    except Exception as e:
+        logger.error(f"Erro ao processar JSON da requisição: {str(e)}")
         raise HTTPException(status_code=400, detail="Dados ausentes ou inválidos")
     
     if not data:
+        logger.error("Dados vazios na requisição")
         raise HTTPException(status_code=400, detail="Dados ausentes")
     
     work_order_id = data.get('work_order_id')
     
     if not work_order_id:
+        logger.error("ID da ordem de trabalho ausente nos dados")
         raise HTTPException(status_code=400, detail="ID da ordem de trabalho ausente")
     
     # Validar formato do work_order_id (8 dígitos numéricos)
     if not re.match(r'^\d{8}$', work_order_id):
+        logger.error(f"Formato inválido de ID: {work_order_id}")
         raise HTTPException(status_code=400, detail="ID da ordem de trabalho deve ter 8 dígitos numéricos")
     
     # Preparar credenciais
@@ -68,8 +88,10 @@ async def allocate_work_order(
     
     try:
         # Chamar a VM API
+        logger.debug(f"Chamando VM API para alocar WO {work_order_id}")
         vm_api_client = VMApiClient()
         result = vm_api_client.allocate_work_order(work_order_id, credentials)
+        logger.debug(f"Resultado da VM API: {json.dumps(result)}")
         
         # Se processamento síncrono, enviar notificação
         if result.get('status') == 'success' and current_user.whatsapp:
