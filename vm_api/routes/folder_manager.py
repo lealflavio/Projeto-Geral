@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 folder_manager_bp = Blueprint('folder_manager', __name__)
 
 # Diretório base para pastas de usuários na VM
-VM_BASE_FOLDER = os.environ.get('VM_BASE_FOLDER', '/home/flavioleal/Sistema/usuarios')
+# Nota: Mantemos VM_BASE_FOLDER como variável específica, mas com fallback para PYTHONPATH
+VM_BASE_FOLDER = os.environ.get('VM_BASE_FOLDER', os.environ.get('PYTHONPATH', '/home/flavioleal/Sistema/usuarios'))
 
 @folder_manager_bp.route('/api/folders/create', methods=['POST'])
 @api_key_required
