@@ -6,6 +6,7 @@ import Creditos from "./pages/Creditos";
 import WorkOrderAllocation from './pages/WorkOrderAllocation';
 import Simulador from "./pages/Simulador";
 import MinhasWOs from "./pages/MinhasWOs";
+import MapaKMs from "./pages/MapaKMs";
 import Perfil from "./pages/Perfil";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoutes";
@@ -24,6 +25,7 @@ function App() {
           <Route path="/alocar-wo" element={<WorkOrderAllocation />} />
           <Route path="/simulador" element={<Simulador />} />
           <Route path="/wos" element={<MinhasWOs />} />
+          <Route path="/mapa-kms" element={<MapaKMs />} />
           <Route path="/perfil" element={<Perfil />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
