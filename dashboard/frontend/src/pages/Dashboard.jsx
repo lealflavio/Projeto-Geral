@@ -136,7 +136,7 @@ const DashboardContent = () => {
     };
   }, [isAutoRefresh, refetch]);
 
-  // Cores para gráficos
+  // Cores para gráficos - usando variáveis do tema
   const COLORS = ['#7C3AED', '#9F7AEA', '#B794F4', '#D6BCFA'];
   
   // Formatação de data/hora da última atualização
@@ -149,7 +149,7 @@ const DashboardContent = () => {
   // Componente de card animado
   const AnimatedCard = ({ icon, label, value, color, gradient }) => (
     <motion.div
-      className={`bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all ${gradient}`}
+      className={`bg-card p-6 rounded-2xl shadow-md hover:shadow-lg transition-all ${gradient}`}
       whileHover={{ y: -5 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -157,10 +157,10 @@ const DashboardContent = () => {
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-sm text-muted">{label}</p>
           <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
         </div>
-        <div className={`p-3 rounded-full ${gradient} text-white`}>
+        <div className={`p-3 rounded-full ${gradient} text-card`}>
           {icon}
         </div>
       </div>
@@ -177,10 +177,10 @@ const DashboardContent = () => {
     >
       <div className="flex justify-between items-start">
         <div>
-          <p className="font-medium text-gray-800">{tipo}</p>
-          <p className="text-sm text-gray-500">{descricao}</p>
+          <p className="font-medium text-text">{tipo}</p>
+          <p className="text-sm text-muted">{descricao}</p>
         </div>
-        <span className="text-xs text-gray-400 flex items-center">
+        <span className="text-xs text-muted flex items-center">
           <Clock size={12} className="mr-1" />
           {tempo}
         </span>
@@ -210,22 +210,22 @@ const DashboardContent = () => {
   // Componente de ação rápida
   const QuickAction = ({ icon, label, onClick }) => (
     <motion.button
-      className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all"
+      className="flex flex-col items-center justify-center p-4 bg-card rounded-xl shadow-sm hover:shadow-md transition-all"
       whileHover={{ y: -2, scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
     >
-      <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white mb-2">
+      <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-card mb-2">
         {icon}
       </div>
-      <span className="text-xs text-gray-700">{label}</span>
+      <span className="text-xs text-text">{label}</span>
     </motion.button>
   );
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -247,12 +247,10 @@ const DashboardContent = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho com título e controles */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
-        
+      {/* Controles - Título removido para evitar duplicidade */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-4">
         <div className="flex items-center space-x-4">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-muted">
             Última atualização: {formatLastUpdated(dataUpdatedAt)}
           </div>
           
@@ -262,11 +260,11 @@ const DashboardContent = () => {
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
               title="Atualizar dados"
             >
-              <RefreshCw size={18} className="text-gray-600" />
+              <RefreshCw size={18} className="text-muted" />
             </button>
             
             <div className="flex items-center ml-4">
-              <span className="text-xs text-gray-500 mr-2">Auto</span>
+              <span className="text-xs text-muted mr-2">Auto</span>
               <button
                 onClick={() => setIsAutoRefresh(!isAutoRefresh)}
                 className={`relative inline-flex h-5 w-10 items-center rounded-full ${
@@ -274,7 +272,7 @@ const DashboardContent = () => {
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                  className={`inline-block h-4 w-4 transform rounded-full bg-card transition ${
                     isAutoRefresh ? 'translate-x-5' : 'translate-x-1'
                   }`}
                 />
@@ -322,12 +320,12 @@ const DashboardContent = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Tendência de WOs */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-6 rounded-2xl shadow-md"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Tendência de WOs Finalizadas</h2>
+          <h2 className="text-lg font-medium text-text mb-4">Tendência de WOs Finalizadas</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.tendenciaWOs || []}>
@@ -350,12 +348,12 @@ const DashboardContent = () => {
 
         {/* Distribuição de Ganhos */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-6 rounded-2xl shadow-md"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Distribuição de Ganhos</h2>
+          <h2 className="text-lg font-medium text-text mb-4">Distribuição de Ganhos</h2>
           <div className="h-64 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -385,12 +383,12 @@ const DashboardContent = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         {/* Atividades Recentes */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md lg:col-span-2"
+          className="bg-card p-6 rounded-2xl shadow-md lg:col-span-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Atividades Recentes</h2>
+          <h2 className="text-lg font-medium text-text mb-4">Atividades Recentes</h2>
           <div className="divide-y divide-gray-100">
             {data?.atividadesRecentes?.map((atividade) => (
               <ActivityItem 
@@ -405,12 +403,12 @@ const DashboardContent = () => {
 
         {/* Ações Rápidas */}
         <motion.div 
-          className="bg-white p-6 rounded-2xl shadow-md"
+          className="bg-card p-6 rounded-2xl shadow-md"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <h2 className="text-lg font-medium text-gray-800 mb-4">Ações Rápidas</h2>
+          <h2 className="text-lg font-medium text-text mb-4">Ações Rápidas</h2>
           <div className="grid grid-cols-2 gap-4">
             <QuickAction 
               icon={<Activity size={20} />}

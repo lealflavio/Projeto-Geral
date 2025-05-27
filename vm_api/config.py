@@ -16,7 +16,7 @@ API_DEBUG = os.getenv('API_DEBUG', 'False').lower() == 'true'
 
 # Configurações de segurança
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'chave-secreta-temporaria')
-API_KEY = os.getenv('API_KEY', 'api-key-temporaria')
+API_KEY = os.getenv('API_KEY', '99722340')
 
 # Configurações do Redis
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
