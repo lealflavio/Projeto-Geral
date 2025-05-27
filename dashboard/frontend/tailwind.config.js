@@ -4,9 +4,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // padronizacao-cores-variaveis
         // Cores principais do sistema
         primary: "#6C63FF",       // botão principal, destaque
         secondary: "#ECEBFF",     // plano de fundo leve
+        primary: "#0071E3",       // botão principal, destaque
+        secondary: "#E3F2FF",     // plano de fundo leve
+        // master
         background: "#FAFAFA",    // fundo geral
         text: "#2E2E2E",          // texto principal
         muted: "#888888",         // texto secundário
