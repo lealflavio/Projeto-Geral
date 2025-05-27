@@ -1,0 +1,102 @@
+## ✅ ARQUITETURA DO SISTEMA - PROJETO WONDERCOM
+
+### Visao Geral:
+
+Sistema baseado em:
+
+* Google Drive (upload de PDFs)
+* Google Cloud Functions (monitoramento de arquivos)
+* VM com scripts Python (extração + automação Selenium)
+* Backend com API Flask/FastAPI (Render)
+* Dashboard React (Netlify)
+* Banco PostgreSQL (Render)
+* Notificações via CallMeBot
+
+---
+
+### DIAGRAMA DE ARQUITETURA (texto)
+
+```
+Usuário (técnico)
+   |
+[Google Drive - pasta do técnico]
+   |
+[Cloud Function detecta novo arquivo] -> [Fila de tarefas / Banco marca como "novo"]
+   |
+[Worker em VM baixa PDF]
+   |
+[Script extrai dados do PDF]
+   |
+[Banco: salva dados extraídos e status]
+   |
+[Worker Selenium acessa portal]
+   |
+[Envia dados extraídos]
+   |
+[Atualiza banco: "concluído" ou "erro"]
+   |
+[Mover PDF para pasta final + enviar WhatsApp]
+   |
+[Dashboard atualizado com KPIs]
+```
+
+---
+
+## ✅ CHECKLIST COMPLETO DE TAREFAS
+
+### 1. Google Drive & Cloud Functions
+
+* [ ] Criar pastas por técnico no Google Drive
+* [ ] Implementar trigger por upload via Cloud Functions
+* [ ] Salvar no banco o nome, path e dono do PDF
+
+### 2. Backend (API Render)
+
+* [ ] Criar rota POST `/api/pdf/registrar`
+* [ ] Criar rota GET `/api/wo/status`
+* [ ] Criar rota POST `/api/wondercom/allocate`
+* [ ] Implementar cache local e controle de tarefas
+
+### 3. Banco de Dados (Render/PostgreSQL)
+
+* [ ] Tabela `usuarios`
+* [ ] Tabela `pdfs`
+* [ ] Tabela `dados_extraidos`
+* [ ] Tabela `wo_processadas`
+* [ ] Tabela `logs_execucao`
+
+### 4. VM (Processamento Local)
+
+* [ ] Script de download dos PDFs
+* [ ] Script de extração de dados do PDF
+* [ ] Script Selenium para preencher portal
+* [ ] Script para mover PDFs para pasta final
+
+### 5. Fila de Tarefas / Worker Assíncrono
+
+* [ ] Instalar Celery + Redis
+* [ ] Criar workers para processar PDFs, rodar Selenium, notificar
+* [ ] Implementar retries com backoff
+
+### 6. Dashboard (Frontend Netlify)
+
+* [ ] Tela de upload ou link para Google Drive
+* [ ] Tela de alocação (input número WO)
+* [ ] KPIs de sucesso/falha por técnico
+* [ ] Status em tempo real por PDF
+
+### 7. Notificação (CallMeBot)
+
+* [ ] Envio após sucesso
+* [ ] Envio após falha
+* [ ] Mensagens com emoji, tempo e resumo
+
+### 8. Monitoramento e Logs
+
+* [ ] Logar tudo via `logging`
+* [ ] Enviar erros críticos para email ou WhatsApp
+* [ ] Implementar painel de logs/tarefas
+
+---
+
+Se desejar, posso agora gerar o diagrama visual (em imagem). Quer que eu gere?
