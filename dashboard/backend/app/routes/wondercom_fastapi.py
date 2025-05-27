@@ -4,8 +4,21 @@ import re
 import logging
 from typing import Dict, Any, Optional
 
-from ..services.vm_api import VMApiClient
-from ..services.notification import NotificationService
+# Importação corrigida para o VMApiClient
+from ..services.vm_api.client import VMApiClient
+
+# Importação do stub de NotificationService
+# Nota: Este serviço precisa ser criado no diretório correto
+class NotificationService:
+    """Stub para o serviço de notificação."""
+    
+    def send_whatsapp_notification(self, phone_number: str, message: str) -> dict:
+        """Stub para envio de notificação via WhatsApp."""
+        logging.info(f"[STUB] Enviando WhatsApp para {phone_number}: {message}")
+        return {"status": "success", "message": "Notification sent (stub)"}
+
+# Importações de modelos e autenticação
+# Ajuste conforme a estrutura real do projeto
 from ..models.user import User
 from ..models.work_order import WorkOrder
 from ..auth import get_current_user
