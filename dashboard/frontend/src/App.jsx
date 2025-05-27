@@ -11,6 +11,7 @@ import Perfil from "./pages/Perfil";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoutes";
 import EsqueciSenhaPage from "./pages/EsqueciSenhaPage";
+import SessionTimeoutHandler from "./components/SessionTimeoutHandler";
 
 function App() {
   return (
@@ -19,7 +20,13 @@ function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/cadastro" element={<CadastroPage />} />
         <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route element={
+          <ProtectedRoute>
+            <SessionTimeoutHandler>
+              <Layout />
+            </SessionTimeoutHandler>
+          </ProtectedRoute>
+        }>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creditos" element={<Creditos />} />
           <Route path="/alocar-wo" element={<WorkOrderAllocation />} />
