@@ -1,21 +1,30 @@
 """
-Cliente para comunicação com a API da VM.
-Este módulo implementa as funções para interagir com a API REST da VM.
+Cliente para comunicação com a VM API.
+Versão refatorada para ser compatível com FastAPI.
 """
-
-import requests
-import logging
 import os
-import json
-from flask import current_app, request
+import logging
+import requests
 
 # Configurar logging
 logger = logging.getLogger(__name__)
 
 class VMApiClient:
-    def __init__(self):
+    """Cliente para comunicação com a VM API."""
+    
+    def __init__(self, base_callback_url=None):
+        """
+        Inicializa o cliente da VM API.
+        
+        Args:
+            base_callback_url (str, opcional): URL base para callbacks
+                Se não fornecido, será obtido da variável de ambiente BACKEND_URL
+        """
         self.base_url = os.getenv('VM_API_URL', 'http://34.88.3.237:5000')
         self.api_key = os.getenv('VM_API_KEY', 'api-key-temporaria')
+        
+        # URL base para callbacks - não depende mais do Flask request
+        self.base_callback_url = base_callback_url or os.getenv('BACKEND_URL')
         
         if not self.base_url:
             logger.error("VM_API_URL não configurada")
@@ -31,6 +40,28 @@ class VMApiClient:
             'Content-Type': 'application/json',
             'X-API-Key': self.api_key
         }
+    
+    def _get_callback_url(self, endpoint):
+        """
+        Gera URL de callback para o endpoint especificado.
+        
+        Args:
+            endpoint (str): Endpoint para callback (ex: 'allocation-result')
+            
+        Returns:
+            str: URL completa para callback
+        """
+        if not self.base_callback_url:
+            logger.warning("URL base para callbacks não configurada")
+            return None
+        
+        # Garantir que a URL base não termine com barra
+        base = self.base_callback_url.rstrip('/')
+        
+        # Garantir que o endpoint não comece com barra
+        endpoint = endpoint.lstrip('/')
+        
+        return f"{base}/api/callbacks/{endpoint}"
     
     def allocate_work_order(self, work_order_id, credentials, async_processing=False):
         """
@@ -54,8 +85,9 @@ class VMApiClient:
         
         if async_processing:
             # Se for assíncrono, adicionar URL de callback
-            callback_url = f"{request.url_root.rstrip('/')}/api/callbacks/allocation-result"
-            data['callback_url'] = callback_url
+            callback_url = self._get_callback_url('allocation-result')
+            if callback_url:
+                data['callback_url'] = callback_url
         
         try:
             response = requests.post(
@@ -96,8 +128,9 @@ class VMApiClient:
             data['credentials'] = credentials
         
         # Adicionar URL de callback
-        callback_url = f"{request.url_root.rstrip('/')}/api/callbacks/processing-result"
-        data['callback_url'] = callback_url
+        callback_url = self._get_callback_url('processing-result')
+        if callback_url:
+            data['callback_url'] = callback_url
         
         try:
             response = requests.post(
