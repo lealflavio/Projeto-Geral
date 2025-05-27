@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, Share2, Download, Clipboard, ArrowRight, Copy } from "lucide-react";
+import { Search, MapPin, Share2, Download, Clipboard, ArrowRight, Copy, Navigation } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
 
@@ -41,6 +41,47 @@ const extrairInformacoes = (textoCliente) => {
   const slid = slidMatch ? slidMatch[1] : "";
   
   return { acesso, numBox, tipoBox, telefone, slid };
+};
+
+// Função para formatar o estado da WO (primeira letra maiúscula de cada palavra)
+const formatarEstadoWO = (estado) => {
+  if (!estado) return "N/A";
+  
+  return estado
+    .toLowerCase()
+    .split(' ')
+    .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+    .join(' ');
+};
+
+// Função para determinar a cor da fibra
+const determinarCorFibra = (nomeFibra) => {
+  if (!nomeFibra || nomeFibra === "N/A") return null;
+  
+  const cores = {
+    'azul': '#1E90FF',
+    'amarelo': '#FFD700',
+    'vermelho': '#FF4500',
+    'preto': '#000000',
+    'laranja': '#FFA500',
+    'ciano': '#00FFFF',
+    'castanho': '#8B4513',
+    'cinza': '#808080',
+    'branco': '#FFFFFF',
+    'verde': '#32CD32',
+    'violeta': '#8A2BE2',
+    'rosa': '#FF69B4',
+    'turquesa': '#40E0D0'
+  };
+  
+  // Verificar se o nome da fibra contém alguma das cores
+  for (const [cor, hex] of Object.entries(cores)) {
+    if (nomeFibra.toLowerCase().includes(cor)) {
+      return { nome: cor, hex };
+    }
+  }
+  
+  return null;
 };
 
 // Função para salvar WO no cache
@@ -120,6 +161,7 @@ const WorkOrderAllocation = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [showMap, setShowMap] = useState(false);
+  const [showMapOptions, setShowMapOptions] = useState(false);
   const [usuario, setUsuario] = useState(null);
   const [historicoWOs, setHistoricoWOs] = useState([]);
   const [copiedField, setCopiedField] = useState('');
@@ -216,6 +258,9 @@ const WorkOrderAllocation = () => {
         // Formatar morada
         const moradaFormatada = formatarMorada(data.data.endereco);
         
+        // Formatar estado da WO
+        const estadoFormatado = formatarEstadoWO(data.data.estado || data.data.observacoes || "");
+        
         // Criar objeto de resultado
         const resultado = {
           numero: searchTerm,
@@ -229,13 +274,13 @@ const WorkOrderAllocation = () => {
           tipoServico: data.data.tipo_servico || "N/A",
           dataAgendamento: data.data.data_agendamento || "N/A",
           horario: data.data.horario || "N/A",
-          observacoes: data.data.estado || data.data.observacoes || "",
+          observacoes: estadoFormatado,
           // Informações extraídas
           acesso: infoCliente.acesso,
           numBox: infoCliente.numBox,
           tipoBox: infoCliente.tipoBox,
           telefone: infoCliente.telefone,
-          slid: infoCliente.slid || data.data.slid || ""
+          slid: infoCliente.slid || data.data.slid || "CAKIBALE" // Valor fixo temporário
         };
         
         setSearchResult(resultado);
@@ -274,14 +319,14 @@ const WorkOrderAllocation = () => {
       Nº de Box: ${searchResult.numBox}
       Tipo de Box: ${searchResult.tipoBox}
       Morada: ${searchResult.morada}
-      Cor da Fibra: ${searchResult.corFibra}
+      Fibra: ${searchResult.corFibra}
       Data: ${searchResult.dataAgendamento}
       Horário: ${searchResult.horario}
       ${searchResult.slid ? `SLID: ${searchResult.slid}` : ''}
     `;
     if (navigator.share) {
       navigator.share({
-        title: `WO #${searchResult.numero}`,
+        title: `WO ${searchResult.numero}`,
         text: shareText,
       }).catch(err => console.error('Erro ao compartilhar: ', err));
     } else {
@@ -297,6 +342,33 @@ const WorkOrderAllocation = () => {
     } else {
       handleSearch();
     }
+  };
+
+  const abrirMapa = (app) => {
+    if (!searchResult) return;
+    
+    const { lat, lng } = searchResult.coordenadas;
+    let url = '';
+    
+    switch(app) {
+      case 'google':
+        url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        break;
+      case 'waze':
+        url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+        break;
+      case 'apple':
+        url = `http://maps.apple.com/?ll=${lat},${lng}`;
+        break;
+      case 'osm':
+        url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}`;
+        break;
+      default:
+        url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    }
+    
+    window.open(url, '_blank');
+    setShowMapOptions(false);
   };
 
   return (
@@ -355,7 +427,7 @@ const WorkOrderAllocation = () => {
                 className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
                 onClick={() => carregarWOHistorico(wo.numero)}
               >
-                <p className="font-medium text-[#7C3AED]">WO #{wo.numero}</p>
+                <p className="font-medium text-[#7C3AED]">WO {wo.numero}</p>
                 <p className="text-sm text-[#555] truncate">{wo.morada}</p>
                 <p className="text-xs text-[#777] mt-1">
                   {new Date(wo.timestamp).toLocaleDateString()}
@@ -372,8 +444,8 @@ const WorkOrderAllocation = () => {
           {/* Cabeçalho */}
           <div className="bg-[#7C3AED] p-4 text-white flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-semibold">WO #{searchResult.numero}</h2>
-              <p className="text-sm text-purple-200">{searchResult.tipoServico}</p>
+              <h2 className="text-lg font-semibold">WO {searchResult.numero}</h2>
+              <p className="text-sm text-purple-200">{searchResult.observacoes}</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -395,80 +467,38 @@ const WorkOrderAllocation = () => {
           {/* Conteúdo */}
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Coluna 1 - Informações Essenciais */}
+              {/* Coluna 1 */}
               <div>
-                {/* Informações do Cliente - Apenas as essenciais */}
-                <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-[#555] mb-3">Informações Essenciais</h3>
-                  
-                  <div className="mb-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#777]">Acesso</span>
-                      <button
-                        className={`text-xs ${copiedField === 'acesso' ? 'text-green-500' : 'text-[#7C3AED]'} hover:text-purple-700`}
-                        onClick={() => handleCopyToClipboard(searchResult.acesso, 'acesso')}
-                      >
-                        {copiedField === 'acesso' ? 'Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
-                    <p className="text-[#333] font-medium">{searchResult.acesso}</p>
+                {/* SLID */}
+                <div className="mb-6">
+                  <h3 className="text-sm text-[#777] mb-1">SLID</h3>
+                  <div className="flex items-start gap-2">
+                    <p className="text-[#333] font-medium flex-1">{searchResult.slid || "CAKIBALE"}</p>
+                    <button
+                      className={`text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
+                      onClick={() => handleCopyToClipboard(searchResult.slid || "CAKIBALE", 'slid')}
+                      title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
+                    >
+                      <Clipboard size={16} />
+                    </button>
                   </div>
-                  
-                  <div className="mb-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#777]">Nº de Box</span>
-                      <button
-                        className={`text-xs ${copiedField === 'numBox' ? 'text-green-500' : 'text-[#7C3AED]'} hover:text-purple-700`}
-                        onClick={() => handleCopyToClipboard(searchResult.numBox, 'numBox')}
-                      >
-                        {copiedField === 'numBox' ? 'Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
-                    <p className="text-[#333] font-medium">{searchResult.numBox}</p>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#777]">Tipo de Box</span>
-                      <button
-                        className={`text-xs ${copiedField === 'tipoBox' ? 'text-green-500' : 'text-[#7C3AED]'} hover:text-purple-700`}
-                        onClick={() => handleCopyToClipboard(searchResult.tipoBox, 'tipoBox')}
-                      >
-                        {copiedField === 'tipoBox' ? 'Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
-                    <p className="text-[#333] font-medium">{searchResult.tipoBox}</p>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#777]">Telefone</span>
-                      <button
-                        className={`text-xs ${copiedField === 'telefone' ? 'text-green-500' : 'text-[#7C3AED]'} hover:text-purple-700`}
-                        onClick={() => handleCopyToClipboard(searchResult.telefone, 'telefone')}
-                      >
-                        {copiedField === 'telefone' ? 'Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
-                    <p className="text-[#333] font-medium">{searchResult.telefone}</p>
-                  </div>
-                  
-                  {searchResult.slid && (
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <div className="flex justify-between">
-                        <span className="text-xs text-[#777]">SLID</span>
-                        <button
-                          className={`text-xs ${copiedField === 'slid' ? 'text-green-500' : 'text-[#7C3AED]'} hover:text-purple-700`}
-                          onClick={() => handleCopyToClipboard(searchResult.slid, 'slid')}
-                        >
-                          {copiedField === 'slid' ? 'Copiado!' : 'Copiar'}
-                        </button>
-                      </div>
-                      <p className="text-[#333] font-medium">{searchResult.slid}</p>
-                    </div>
-                  )}
                 </div>
                 
+                {/* Fibra */}
+                <div className="mb-6">
+                  <h3 className="text-sm text-[#777] mb-1">Fibra</h3>
+                  <div className="flex items-center gap-2">
+                    {determinarCorFibra(searchResult.corFibra) && (
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: determinarCorFibra(searchResult.corFibra).hex }}
+                      ></div>
+                    )}
+                    <p className="text-[#333]">{searchResult.corFibra}</p>
+                  </div>
+                </div>
+                
+                {/* Morada */}
                 <div className="mb-6">
                   <h3 className="text-sm text-[#777] mb-1">Morada</h3>
                   <div className="flex items-start gap-2">
@@ -483,11 +513,28 @@ const WorkOrderAllocation = () => {
                   </div>
                 </div>
                 
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">Cor da Fibra</h3>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full bg-blue-500`}></div>
-                    <p className="text-[#333]">{searchResult.corFibra}</p>
+                {/* Informações */}
+                <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-sm font-medium text-[#555] mb-3">Informações</h3>
+                  
+                  <div className="mb-2">
+                    <span className="text-xs text-[#777]">Acesso</span>
+                    <p className="text-[#333] font-medium">{searchResult.acesso}</p>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <span className="text-xs text-[#777]">Nº de Box</span>
+                    <p className="text-[#333] font-medium">{searchResult.numBox}</p>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <span className="text-xs text-[#777]">Tipo de Box</span>
+                    <p className="text-[#333] font-medium">{searchResult.tipoBox}</p>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <span className="text-xs text-[#777]">Instalar Telefone?</span>
+                    <p className="text-[#333] font-medium">{searchResult.telefone}</p>
                   </div>
                 </div>
               </div>
@@ -504,53 +551,88 @@ const WorkOrderAllocation = () => {
                   <p className="text-[#333]">{searchResult.horario}</p>
                 </div>
                 
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">Estado da WO</h3>
-                  <p className="text-[#333] p-3 bg-gray-50 rounded-lg text-sm">
-                    {searchResult.observacoes}
-                  </p>
+                {/* Mapa - Melhorado com opções de aplicativos */}
+                <div className="mt-4">
+                  <button
+                    className="flex items-center gap-2 text-[#7C3AED] hover:underline"
+                    onClick={() => {
+                      setShowMap(!showMap);
+                      setShowMapOptions(false);
+                    }}
+                  >
+                    <MapPin size={18} />
+                    <span>{showMap ? 'Ocultar mapa' : 'Ver no mapa'}</span>
+                    <ArrowRight size={16} className={`transition-transform ${showMap ? 'rotate-90' : ''}`} />
+                  </button>
+                  
+                  {showMap && (
+                    <div className="mt-4 bg-gray-100 rounded-lg p-4 h-auto">
+                      <div className="text-center mb-4">
+                        <MapPin size={32} className="mx-auto mb-2 text-[#7C3AED]" />
+                        <p className="text-[#555] mb-4">
+                          Selecione um aplicativo para abrir as coordenadas
+                        </p>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <button
+                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
+                            onClick={() => abrirMapa('google')}
+                          >
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Google_Maps_icon_%282020%29.svg/120px-Google_Maps_icon_%282020%29.svg.png" 
+                              alt="Google Maps"
+                              className="w-8 h-8 mb-2"
+                            />
+                            <span className="text-sm">Google Maps</span>
+                          </button>
+                          
+                          <button
+                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
+                            onClick={() => abrirMapa('waze')}
+                          >
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Waze_logo.svg/120px-Waze_logo.svg.png" 
+                              alt="Waze"
+                              className="w-8 h-8 mb-2"
+                            />
+                            <span className="text-sm">Waze</span>
+                          </button>
+                          
+                          <button
+                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
+                            onClick={() => abrirMapa('apple')}
+                          >
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Apple_Maps_logo.svg/120px-Apple_Maps_logo.svg.png" 
+                              alt="Apple Maps"
+                              className="w-8 h-8 mb-2"
+                            />
+                            <span className="text-sm">Apple Maps</span>
+                          </button>
+                          
+                          <button
+                            className="flex flex-col items-center justify-center p-3 bg-white rounded-lg hover:bg-gray-50 transition"
+                            onClick={() => abrirMapa('osm')}
+                          >
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Openstreetmap_logo.svg/120px-Openstreetmap_logo.svg.png" 
+                              alt="OpenStreetMap"
+                              className="w-8 h-8 mb-2"
+                            />
+                            <span className="text-sm">OpenStreetMap</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             
-            {/* Mapa - Oculto por padrão, sem mostrar coordenadas */}
-            <div className="mt-4">
+            {/* Botões de ação - Removido "Alocar para Processamento" */}
+            <div className="mt-6 flex justify-center">
               <button
-                className="flex items-center gap-2 text-[#7C3AED] hover:underline"
-                onClick={() => setShowMap(!showMap)}
-              >
-                <MapPin size={18} />
-                <span>{showMap ? 'Ocultar mapa' : 'Ver no mapa'}</span>
-                <ArrowRight size={16} className={`transition-transform ${showMap ? 'rotate-90' : ''}`} />
-              </button>
-              {showMap && (
-                <div className="mt-4 bg-gray-100 rounded-lg p-2 h-64 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin size={32} className="mx-auto mb-2 text-[#7C3AED]" />
-                    <p className="text-[#555]">
-                      Mapa interativo seria exibido aqui
-                    </p>
-                    <button
-                      className="mt-2 text-sm text-[#7C3AED] hover:underline"
-                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${searchResult.coordenadas.lat},${searchResult.coordenadas.lng}`, '_blank')}
-                    >
-                      Abrir no Google Maps
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Botões de ação */}
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button
-                className="flex-1 bg-[#7C3AED] text-white py-2 rounded-lg font-medium hover:bg-[#6B21A8] transition"
-                onClick={() => alert('Alocando WO para processamento...')}
-              >
-                Alocar para Processamento
-              </button>
-              <button
-                className="flex-1 border border-gray-200 py-2 rounded-lg text-[#555] hover:bg-gray-50 transition"
+                className="w-full md:w-1/2 border border-gray-200 py-2 rounded-lg text-[#555] hover:bg-gray-50 transition"
                 onClick={() => setSearchResult(null)}
               >
                 Nova Busca
