@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Search, Filter, Download, Calendar, ArrowUpDown, Clock, MapPin, User, Package } from 'lucide-react';
+import '../styles/variables.css';
 
 const mockProcessedPDFs = [
   { 
@@ -131,7 +132,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
   };
   
   return (
-    <div className="bg-white rounded-xl shadow overflow-hidden">
+    <div className="bg-card rounded-xl shadow overflow-hidden">
       {/* Barra de filtros e pesquisa */}
       <div className="p-4 border-b border-gray-100 bg-gray-50">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -139,17 +140,17 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
             <input 
               type="text" 
               placeholder="Buscar WO, técnico, endereço..." 
-              className="w-full bg-white border border-gray-200 rounded-lg py-2 pl-9 pr-3 text-sm text-[#555]"
+              className="w-full bg-card border border-gray-200 rounded-lg py-2 pl-9 pr-3 text-sm text-muted"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#777]" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
           </div>
           
           <div className="flex gap-2">
             <div className="relative">
               <select 
-                className="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-sm text-[#555]"
+                className="appearance-none bg-card border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-sm text-muted"
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
               >
@@ -158,7 +159,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                 <option value="90dias">90 dias</option>
                 <option value="todos">Todos</option>
               </select>
-              <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#777]" />
+              <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted" />
             </div>
           </div>
         </div>
@@ -171,7 +172,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
             <table className="w-full min-w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="py-3 px-4 text-left text-xs font-medium text-[#555] uppercase tracking-wider">
+                  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     <button 
                       className="flex items-center gap-1"
                       onClick={() => toggleSortOrder('data')}
@@ -182,7 +183,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                       )}
                     </button>
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-[#555] uppercase tracking-wider">
+                  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     <button 
                       className="flex items-center gap-1"
                       onClick={() => toggleSortOrder('wo')}
@@ -193,7 +194,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                       )}
                     </button>
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-[#555] uppercase tracking-wider hidden md:table-cell">
+                  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider hidden md:table-cell">
                     <button 
                       className="flex items-center gap-1"
                       onClick={() => toggleSortOrder('tecnico')}
@@ -204,21 +205,21 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                       )}
                     </button>
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-[#555] uppercase tracking-wider">Status</th>
-                  <th className="py-3 px-4 text-right text-xs font-medium text-[#555] uppercase tracking-wider">Ações</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
+                  <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {sortedServices.length > 0 ? (
                   sortedServices.map((service) => (
                     <tr key={service.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 text-sm text-[#555] whitespace-nowrap">{service.data}</td>
-                      <td className="py-3 px-4 text-sm font-medium text-[#333] whitespace-nowrap">#{service.wo}</td>
-                      <td className="py-3 px-4 text-sm text-[#555] whitespace-nowrap hidden md:table-cell">{service.tecnico}</td>
+                      <td className="py-3 px-4 text-sm text-muted whitespace-nowrap">{service.data}</td>
+                      <td className="py-3 px-4 text-sm font-medium text-text whitespace-nowrap">#{service.wo}</td>
+                      <td className="py-3 px-4 text-sm text-muted whitespace-nowrap hidden md:table-cell">{service.tecnico}</td>
                       <td className="py-3 px-4 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           service.status === 'concluído' 
-                            ? 'bg-green-100 text-green-800' 
+                            ? 'bg-emerald-100 text-emerald-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {service.status === 'concluído' ? 'Concluído' : 'Erro'}
@@ -226,7 +227,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                       </td>
                       <td className="py-3 px-4 text-sm text-right">
                         <button 
-                          className="text-purple-600 hover:text-purple-800 font-medium"
+                          className="text-primary hover:text-primary-dark font-medium"
                           onClick={() => setSelectedService(service)}
                         >
                           Ver detalhes
@@ -236,7 +237,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-gray-500">
+                    <td colSpan="5" className="py-8 text-center text-muted">
                       Nenhuma work order encontrada com os filtros atuais
                     </td>
                   </tr>
@@ -246,19 +247,19 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
           </div>
           
           <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div className="text-sm text-[#777]">
+            <div className="text-sm text-muted">
               Exibindo {sortedServices.length} de {mockProcessedPDFs.length} serviços
             </div>
             <div className="flex items-center gap-2">
               <button 
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
                 onClick={() => exportHistory('csv')}
               >
                 <Download size={16} />
                 <span>CSV</span>
               </button>
               <button 
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
                 onClick={() => exportHistory('pdf')}
               >
                 <Download size={16} />
@@ -282,14 +283,14 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                   >
                     <div className={`p-3 ${
                       service.status === 'concluído' 
-                        ? 'bg-green-50 border-b border-green-100' 
+                        ? 'bg-emerald-50 border-b border-emerald-100' 
                         : 'bg-red-50 border-b border-red-100'
                     }`}>
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-[#333]">WO #{service.wo}</span>
+                        <span className="font-medium text-text">WO #{service.wo}</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           service.status === 'concluído' 
-                            ? 'bg-green-100 text-green-800' 
+                            ? 'bg-emerald-100 text-emerald-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {service.status === 'concluído' ? 'Concluído' : 'Erro'}
@@ -299,26 +300,26 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                     
                     <div className="p-4">
                       <div className="flex items-start gap-3 mb-3">
-                        <Clock size={16} className="text-gray-400 mt-0.5" />
+                        <Clock size={16} className="text-muted mt-0.5" />
                         <div>
-                          <p className="text-xs text-gray-500">Data</p>
-                          <p className="text-sm text-[#333]">{service.data}</p>
+                          <p className="text-xs text-muted">Data</p>
+                          <p className="text-sm text-text">{service.data}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-start gap-3 mb-3">
-                        <User size={16} className="text-gray-400 mt-0.5" />
+                        <User size={16} className="text-muted mt-0.5" />
                         <div>
-                          <p className="text-xs text-gray-500">Técnico</p>
-                          <p className="text-sm text-[#333]">{service.tecnico}</p>
+                          <p className="text-xs text-muted">Técnico</p>
+                          <p className="text-sm text-text">{service.tecnico}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-start gap-3">
-                        <MapPin size={16} className="text-gray-400 mt-0.5" />
+                        <MapPin size={16} className="text-muted mt-0.5" />
                         <div>
-                          <p className="text-xs text-gray-500">Endereço</p>
-                          <p className="text-sm text-[#333] truncate" title={service.endereco}>
+                          <p className="text-xs text-muted">Endereço</p>
+                          <p className="text-sm text-text truncate" title={service.endereco}>
                             {service.endereco}
                           </p>
                         </div>
@@ -326,7 +327,7 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                       
                       <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
                         <button 
-                          className="text-purple-600 hover:text-purple-800 font-medium text-sm"
+                          className="text-primary hover:text-primary-dark font-medium text-sm"
                           onClick={() => setSelectedService(service)}
                         >
                           Ver detalhes
@@ -337,26 +338,26 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-gray-500">
+              <div className="py-8 text-center text-muted">
                 Nenhuma work order encontrada com os filtros atuais
               </div>
             )}
           </div>
           
           <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div className="text-sm text-[#777]">
+            <div className="text-sm text-muted">
               Exibindo {sortedServices.length} de {mockProcessedPDFs.length} serviços
             </div>
             <div className="flex items-center gap-2">
               <button 
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
                 onClick={() => exportHistory('csv')}
               >
                 <Download size={16} />
                 <span>CSV</span>
               </button>
               <button 
-                className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1"
                 onClick={() => exportHistory('pdf')}
               >
                 <Download size={16} />
@@ -367,125 +368,91 @@ const ProcessedServicesHistory = ({ viewMode = 'list', filterStatus = 'todas' })
         </>
       )}
       
-      {/* Modal de detalhes do serviço - redesenhado para melhor experiência mobile */}
+      {/* Modal de detalhes do serviço */}
       {selectedService && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Cabeçalho do modal */}
-            <div className={`p-4 ${
-              selectedService.status === 'concluído' 
-                ? 'bg-green-50' 
-                : 'bg-red-50'
-            }`}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-lg font-semibold text-[#333]">WO #{selectedService.wo}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedService.status === 'concluído' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedService.status === 'concluído' ? 'Concluído' : 'Erro'}
-                    </span>
-                    <span className="text-xs text-gray-500">{selectedService.data}</span>
-                  </div>
-                </div>
-                <button 
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                  onClick={() => setSelectedService(null)}
-                  aria-label="Fechar"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
+          <div className="bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-text">
+                Detalhes da Work Order #{selectedService.wo}
+              </h3>
+              <button 
+                className="text-muted hover:text-text"
+                onClick={() => setSelectedService(null)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
             
-            {/* Conteúdo do modal com scroll */}
-            <div className="p-4 overflow-y-auto flex-1">
-              {/* Informações principais */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <User size={18} className="text-purple-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Técnico</p>
-                    <p className="text-[#333] font-medium">{selectedService.tecnico}</p>
-                  </div>
+            <div className="p-4 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-xs text-muted mb-1">Data</p>
+                  <p className="text-sm text-text">{selectedService.data}</p>
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <MapPin size={18} className="text-purple-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Endereço</p>
-                    <p className="text-[#333]">{selectedService.endereco}</p>
+                <div>
+                  <p className="text-xs text-muted mb-1">Status</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedService.status === 'concluído' 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedService.status === 'concluído' ? 'Concluído' : 'Erro'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-muted mb-1">Técnico</p>
+                  <p className="text-sm text-text">{selectedService.tecnico}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted mb-1">Endereço</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-text">{selectedService.endereco}</p>
                     <button 
-                      className="text-xs text-purple-600 hover:text-purple-800 mt-1 flex items-center gap-1"
+                      className="text-primary hover:text-primary-dark"
                       onClick={() => openMap(selectedService.coordenadas)}
                     >
-                      Ver no mapa
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
-                      </svg>
+                      <MapPin size={16} />
                     </button>
                   </div>
                 </div>
               </div>
               
-              {/* Observações */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-[#333] mb-2 flex items-center gap-2">
-                  <FileText size={16} className="text-purple-600" />
-                  Observações
-                </h3>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <p className="text-sm text-[#555]">{selectedService.observacoes}</p>
-                </div>
+              <div className="mb-4">
+                <p className="text-xs text-muted mb-1">Observações</p>
+                <p className="text-sm text-text p-3 bg-gray-50 rounded-lg">
+                  {selectedService.observacoes}
+                </p>
               </div>
               
-              {/* Materiais */}
               <div>
-                <h3 className="text-sm font-medium text-[#333] mb-2 flex items-center gap-2">
-                  <Package size={16} className="text-purple-600" />
-                  Materiais Utilizados
-                </h3>
+                <p className="text-xs text-muted mb-1">Materiais Utilizados</p>
                 {selectedService.materiais.length > 0 ? (
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <ul className="space-y-1">
-                      {selectedService.materiais.map((material, index) => (
-                        <li key={index} className="text-sm text-[#555] flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 bg-purple-600 rounded-full"></span>
-                          {material}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ul className="text-sm text-text p-3 bg-gray-50 rounded-lg">
+                    {selectedService.materiais.map((material, index) => (
+                      <li key={index} className="flex items-center gap-2 mb-1 last:mb-0">
+                        <Package size={14} className="text-muted" />
+                        <span>{material}</span>
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-sm text-[#555]">Nenhum material registrado</p>
-                  </div>
+                  <p className="text-sm text-muted p-3 bg-gray-50 rounded-lg">
+                    Nenhum material registrado
+                  </p>
                 )}
               </div>
             </div>
             
-            {/* Rodapé do modal */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row gap-3 justify-end">
+            <div className="p-4 border-t border-gray-200 flex justify-end">
               <button 
-                className="px-4 py-2 border border-gray-200 rounded-lg text-[#555] hover:bg-gray-100 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-card rounded-lg hover:bg-opacity-90 transition-colors"
                 onClick={() => setSelectedService(null)}
               >
                 Fechar
-              </button>
-              <button 
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                onClick={() => alert(`Baixando PDF da WO #${selectedService.wo}`)}
-              >
-                <Download size={16} />
-                <span>Baixar PDF</span>
               </button>
             </div>
           </div>

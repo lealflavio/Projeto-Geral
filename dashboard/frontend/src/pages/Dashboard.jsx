@@ -25,6 +25,7 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
+import '../styles/variables.css';
 
 // Criando um QueryClient para o Dashboard
 const queryClient = new QueryClient();
@@ -137,7 +138,7 @@ const DashboardContent = () => {
   }, [isAutoRefresh, refetch]);
 
   // Cores para gráficos - usando variáveis do tema
-  const COLORS = ['#7C3AED', '#9F7AEA', '#B794F4', '#D6BCFA'];
+  const COLORS = ['var(--primary)', 'var(--primary-light)', 'var(--secondary)', 'var(--secondary-light)'];
   
   // Formatação de data/hora da última atualização
   const formatLastUpdated = (timestamp) => {
@@ -215,7 +216,7 @@ const DashboardContent = () => {
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
     >
-      <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-card mb-2">
+      <div className="p-3 rounded-full bg-gradient-to-r from-primary to-primary-dark text-card mb-2">
         {icon}
       </div>
       <span className="text-xs text-text">{label}</span>
@@ -268,7 +269,7 @@ const DashboardContent = () => {
               <button
                 onClick={() => setIsAutoRefresh(!isAutoRefresh)}
                 className={`relative inline-flex h-5 w-10 items-center rounded-full ${
-                  isAutoRefresh ? 'bg-purple-600' : 'bg-gray-200'
+                  isAutoRefresh ? 'bg-primary' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -304,7 +305,7 @@ const DashboardContent = () => {
           icon={<CreditCard size={24} />}
           label="Créditos Atuais" 
           value={data?.creditosAtuais || 0}
-          color="text-purple-600"
+          color="text-primary"
           gradient="bg-gradient-to-r from-purple-50 to-indigo-50"
         />
         <AnimatedCard 
@@ -329,17 +330,17 @@ const DashboardContent = () => {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.tendenciaWOs || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-100)" />
                 <XAxis dataKey="dia" />
                 <YAxis />
                 <Tooltip />
                 <Line 
                   type="monotone" 
                   dataKey="quantidade" 
-                  stroke="#7C3AED" 
+                  stroke="var(--primary)" 
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "#7C3AED" }}
-                  activeDot={{ r: 6, fill: "#7C3AED" }}
+                  dot={{ r: 4, fill: "var(--primary)" }}
+                  activeDot={{ r: 6, fill: "var(--primary)" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -363,7 +364,7 @@ const DashboardContent = () => {
                   cy="50%"
                   labelLine={false}
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill="var(--primary)"
                   dataKey="valor"
                   nameKey="tipo"
                   label={({ tipo, valor, percent }) => `${tipo}: €${valor} (${(percent * 100).toFixed(0)}%)`}

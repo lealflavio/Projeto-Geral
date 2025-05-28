@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Filter, Calendar, Search, RefreshCw, List, Grid } from 'lucide-react';
 import ProcessedServicesHistory from '../components/ProcessedServicesHistory';
+import '../styles/variables.css';
 
 const MinhasWOs = () => {
   const [viewMode, setViewMode] = useState('list');
@@ -34,11 +35,11 @@ const MinhasWOs = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="bg-purple-100 p-2 rounded-lg">
-            <FileText size={24} className="text-purple-600" />
+            <FileText size={24} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-[#333]">Minhas Work Orders</h1>
-            <p className="text-sm text-gray-500 hidden sm:block">Gerencie e acompanhe suas ordens de serviço</p>
+            <h1 className="text-xl font-semibold text-text">Minhas Work Orders</h1>
+            <p className="text-sm text-muted hidden sm:block">Gerencie e acompanhe suas ordens de serviço</p>
           </div>
         </div>
         
@@ -48,14 +49,14 @@ const MinhasWOs = () => {
             className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             title="Atualizar"
           >
-            <RefreshCw size={18} className={`text-gray-600 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw size={18} className={`text-muted ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           
           <div className="border-l border-gray-200 h-6 mx-1"></div>
           
           <button 
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-purple-100 text-purple-600' : 'text-gray-600 hover:bg-gray-50'}`}
+            className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-purple-100 text-primary' : 'text-muted hover:bg-gray-50'}`}
             title="Visualização em lista"
           >
             <List size={18} />
@@ -63,7 +64,7 @@ const MinhasWOs = () => {
           
           <button 
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-purple-100 text-purple-600' : 'text-gray-600 hover:bg-gray-50'}`}
+            className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-purple-100 text-primary' : 'text-muted hover:bg-gray-50'}`}
             title="Visualização em grade"
           >
             <Grid size={18} />
@@ -77,8 +78,8 @@ const MinhasWOs = () => {
           <button 
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
               activeTab === 'todas' 
-                ? 'text-purple-600 border-b-2 border-purple-600' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted hover:text-text'
             }`}
             onClick={() => handleTabChange('todas')}
           >
@@ -88,8 +89,8 @@ const MinhasWOs = () => {
           <button 
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
               activeTab === 'concluidas' 
-                ? 'text-purple-600 border-b-2 border-purple-600' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted hover:text-text'
             }`}
             onClick={() => handleTabChange('concluidas')}
           >
@@ -99,8 +100,8 @@ const MinhasWOs = () => {
           <button 
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
               activeTab === 'pendentes' 
-                ? 'text-purple-600 border-b-2 border-purple-600' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted hover:text-text'
             }`}
             onClick={() => handleTabChange('pendentes')}
           >
@@ -110,8 +111,8 @@ const MinhasWOs = () => {
           <button 
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
               activeTab === 'erros' 
-                ? 'text-purple-600 border-b-2 border-purple-600' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted hover:text-text'
             }`}
             onClick={() => handleTabChange('erros')}
           >
@@ -123,8 +124,8 @@ const MinhasWOs = () => {
       {/* Estado de carregamento */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-500">Carregando work orders...</p>
+          <div className="w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+          <p className="text-muted">Carregando work orders...</p>
         </div>
       ) : (
         <>

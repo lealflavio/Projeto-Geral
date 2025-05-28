@@ -55,14 +55,14 @@ const EarningsSimulator = () => {
         // Total geral
         const grandTotal = serviceTotal + kmTotal;
         
-        // Dados para o gráfico
+        // Dados para o gráfico - usando variáveis CSS
         const chartData = {
             labels: ['Serviços', 'Quilômetros'],
             datasets: [
                 {
                     data: [serviceTotal, kmTotal],
-                    backgroundColor: ['#42A5F5', '#66BB6A'],
-                    hoverBackgroundColor: ['#64B5F6', '#81C784']
+                    backgroundColor: ['var(--blue-400)', 'var(--emerald-400)'],
+                    hoverBackgroundColor: ['var(--blue-300)', 'var(--emerald-300)']
                 }
             ]
         };
