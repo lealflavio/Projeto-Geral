@@ -11,13 +11,13 @@ const mockHistoryData = [
 
 const CreditHistory = () => {
   return (
-    <div className="bg-white rounded-xl shadow p-6 mt-6">
+    <div className="bg-card rounded-xl shadow p-6 mt-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <BarChart size={20} className="text-[#7C3AED]" />
-          <h2 className="text-lg font-semibold text-[#333]">Histórico de Créditos</h2>
+          <BarChart size={20} className="text-primary" />
+          <h2 className="text-lg font-semibold text-text">Histórico de Créditos</h2>
         </div>
-        <div className="flex items-center gap-2 text-sm text-[#777]">
+        <div className="flex items-center gap-2 text-sm text-muted">
           <Calendar size={16} />
           <span>Últimos 30 dias</span>
         </div>
@@ -27,18 +27,22 @@ const CreditHistory = () => {
         <table className="w-full min-w-full">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="py-3 text-left text-sm font-medium text-[#555]">Data</th>
-              <th className="py-3 text-left text-sm font-medium text-[#555]">Descrição</th>
-              <th className="py-3 text-right text-sm font-medium text-[#555]">Quantidade</th>
+              <th className="py-3 text-left text-sm font-medium text-muted">Data</th>
+              <th className="py-3 text-left text-sm font-medium text-muted">Descrição</th>
+              <th className="py-3 text-right text-sm font-medium text-muted">Quantidade</th>
             </tr>
           </thead>
           <tbody>
             {mockHistoryData.map((item, index) => (
               <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 text-sm text-[#555]">{item.data}</td>
-                <td className="py-3 text-sm text-[#555]">{item.descricao}</td>
+                <td className="py-3 text-sm text-muted">
+                  {item.data}
+                </td>
+                <td className="py-3 text-sm text-muted">
+                  {item.descricao}
+                </td>
                 <td className={`py-3 text-sm font-medium text-right ${
-                  item.tipo === 'recarga' ? 'text-green-600' : 'text-red-600'
+                  item.tipo === 'recarga' ? 'text-emerald-600' : 'text-red-600'
                 }`}>
                   {item.tipo === 'recarga' ? '+' : '-'}{item.quantidade}
                 </td>
@@ -49,10 +53,10 @@ const CreditHistory = () => {
       </div>
       
       <div className="mt-4 flex justify-between items-center">
-        <button className="text-sm text-[#7C3AED] hover:underline">
+        <button className="text-sm text-primary hover:underline">
           Ver histórico completo
         </button>
-        <button className="text-sm text-[#7C3AED] hover:underline flex items-center gap-1">
+        <button className="text-sm text-primary hover:underline flex items-center gap-1">
           <span>Exportar</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>

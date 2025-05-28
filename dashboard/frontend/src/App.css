@@ -1,3 +1,5 @@
+@import './styles/variables.css';
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -12,10 +14,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em var(--primary-transparent));
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em var(--blue-400-transparent));
 }
 
 @keyframes logo-spin {
@@ -38,5 +40,5 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: var(--muted);
 }

@@ -8,6 +8,7 @@ import { Dialog } from 'primereact/dialog';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/variables.css';
 
 const WorkOrderAllocation = () => {
     const [workOrderId, setWorkOrderId] = useState('');
@@ -104,7 +105,7 @@ const WorkOrderAllocation = () => {
                                 style={{
                                     width: '20px',
                                     height: '20px',
-                                    backgroundColor: result.cor_fibra_hex || '#CCCCCC',
+                                    backgroundColor: result.cor_fibra_hex || 'var(--gray-300)',
                                     marginRight: '10px',
                                     borderRadius: '50%'
                                 }}

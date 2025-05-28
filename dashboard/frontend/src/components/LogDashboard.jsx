@@ -51,18 +51,26 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ptBR from 'date-fns/locale/pt-BR';
 import axios from 'axios';
+import '../styles/variables.css';
 
-// Cores para os níveis de log
+// Cores para os níveis de log usando variáveis CSS
 const LOG_LEVEL_COLORS = {
-  debug: '#6c757d',
-  info: '#17a2b8',
-  warning: '#ffc107',
-  error: '#dc3545',
-  critical: '#721c24'
+  debug: 'var(--gray-500)',
+  info: 'var(--blue-400)',
+  warning: 'var(--amber-400)',
+  error: 'var(--red-500)',
+  critical: 'var(--red-700)'
 };
 
-// Cores para o gráfico de pizza
-const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+// Cores para o gráfico de pizza usando variáveis CSS
+const CHART_COLORS = [
+  'var(--blue-400)', 
+  'var(--emerald-400)', 
+  'var(--amber-400)', 
+  'var(--red-500)', 
+  'var(--purple-500)', 
+  'var(--teal-500)'
+];
 
 const LogDashboard = () => {
   // Estados para filtros
@@ -314,13 +322,13 @@ const LogDashboard = () => {
   
   // Renderizar chip de nível de log
   const renderLevelChip = (level) => {
-    const color = LOG_LEVEL_COLORS[level] || '#6c757d';
+    const color = LOG_LEVEL_COLORS[level] || 'var(--gray-500)';
     return (
       <Chip 
         label={level.toUpperCase()} 
         style={{ 
           backgroundColor: color, 
-          color: ['warning', 'info'].includes(level) ? '#000' : '#fff'
+          color: ['warning', 'info'].includes(level) ? 'var(--text)' : 'var(--card)'
         }}
         size="small"
       />
@@ -525,7 +533,7 @@ const LogDashboard = () => {
               </Grid>
               <Grid item xs={12} md={4}>
                 <Button 
-                  variant="contained" 
+                  variant="outlined" 
                   startIcon={<RefreshIcon />}
                   onClick={handleRefresh}
                   fullWidth
@@ -535,14 +543,14 @@ const LogDashboard = () => {
               </Grid>
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
-                  <InputLabel>Atualização Automática</InputLabel>
+                  <InputLabel>Auto-Refresh</InputLabel>
                   <Select 
-                    value={autoRefresh ? "on" : "off"} 
+                    value={autoRefresh ? 'on' : 'off'} 
                     onChange={() => setAutoRefresh(!autoRefresh)}
-                    label="Atualização Automática"
+                    label="Auto-Refresh"
                   >
-                    <MenuItem value="off">Desativada</MenuItem>
-                    <MenuItem value="on">A cada 30 segundos</MenuItem>
+                    <MenuItem value="on">Ativado (30s)</MenuItem>
+                    <MenuItem value="off">Desativado</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -550,132 +558,142 @@ const LogDashboard = () => {
           </Paper>
         </Grid>
         
-        {/* Cards de estatísticas */}
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Total de Logs</Typography>
-              <Typography variant="h3">{statistics.total_logs}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Taxa de Erro</Typography>
-              <Typography variant="h3">{statistics.error_rate.toFixed(2)}%</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Erros</Typography>
-              <Typography variant="h3">{statistics.by_level?.error || 0}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Críticos</Typography>
-              <Typography variant="h3">{statistics.by_level?.critical || 0}</Typography>
-            </CardContent>
-          </Card>
+        {/* Resumo de estatísticas */}
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Total de Logs</Typography>
+                  <Typography variant="h3">{statistics.total || 0}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Erros</Typography>
+                  <Typography variant="h3" style={{ color: 'var(--red-500)' }}>
+                    {(statistics.by_level?.error || 0) + (statistics.by_level?.critical || 0)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Avisos</Typography>
+                  <Typography variant="h3" style={{ color: 'var(--amber-500)' }}>
+                    {statistics.by_level?.warning || 0}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Categorias</Typography>
+                  <Typography variant="h3">{Object.keys(statistics.by_category || {}).length}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         </Grid>
         
         {/* Gráfico de linha */}
         <Grid item xs={12}>
-          <Paper elevation={2} style={{ padding: 20 }}>
+          <Paper elevation={2} style={{ padding: 16 }}>
             <Typography variant="h6" gutterBottom>Logs por Dia</Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <RechartsTooltip />
-                <Legend />
-                <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total" />
-                <Line type="monotone" dataKey="info" stroke={LOG_LEVEL_COLORS.info} name="Info" />
-                <Line type="monotone" dataKey="warning" stroke={LOG_LEVEL_COLORS.warning} name="Warning" />
-                <Line type="monotone" dataKey="error" stroke={LOG_LEVEL_COLORS.error} name="Error" />
-                <Line type="monotone" dataKey="critical" stroke={LOG_LEVEL_COLORS.critical} name="Critical" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    name="Total" 
+                    stroke="var(--primary)" 
+                    activeDot={{ r: 8 }} 
+                  />
+                  {Object.keys(LOG_LEVEL_COLORS).map((level) => (
+                    <Line 
+                      key={level}
+                      type="monotone" 
+                      dataKey={level} 
+                      name={level.charAt(0).toUpperCase() + level.slice(1)} 
+                      stroke={LOG_LEVEL_COLORS[level]} 
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </Paper>
         </Grid>
         
         {/* Gráficos de pizza */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} style={{ padding: 20 }}>
-            <Typography variant="h6" gutterBottom>Logs por Nível</Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <Paper elevation={2} style={{ padding: 16 }}>
+            <Typography variant="h6" gutterBottom>Distribuição por Nível</Typography>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="var(--primary)"
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </Paper>
         </Grid>
         
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} style={{ padding: 20 }}>
-            <Typography variant="h6" gutterBottom>Logs por Categoria</Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryPieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {categoryPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-        
-        {/* Gráfico de barras */}
-        <Grid item xs={12}>
-          <Paper elevation={2} style={{ padding: 20 }}>
-            <Typography variant="h6" gutterBottom>Distribuição de Logs por Categoria</Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={categoryPieData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <RechartsTooltip />
-                <Legend />
-                <Bar dataKey="value" name="Quantidade">
-                  {categoryPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <Paper elevation={2} style={{ padding: 16 }}>
+            <Typography variant="h6" gutterBottom>Distribuição por Categoria</Typography>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={categoryPieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="var(--primary)"
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) => 
+                      name.length > 10 
+                        ? `${name.substring(0, 10)}...: ${(percent * 100).toFixed(0)}%`
+                        : `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
+                  >
+                    {categoryPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </Paper>
         </Grid>
       </Grid>
@@ -683,18 +701,16 @@ const LogDashboard = () => {
   };
   
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-      <Container maxWidth="xl">
-        <Typography variant="h4" gutterBottom style={{ marginTop: 20 }}>
-          Dashboard de Logs e Monitoramento
-        </Typography>
-        
-        {/* Abas */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+    <Container maxWidth="xl" style={{ marginTop: 20, marginBottom: 40 }}>
+      <Typography variant="h4" gutterBottom>Dashboard de Logs</Typography>
+      
+      {/* Abas */}
+      <Paper elevation={2} style={{ marginBottom: 20 }}>
+        <Box display="flex" p={1}>
           <Button 
             variant={activeTab === 'logs' ? 'contained' : 'text'} 
             onClick={() => handleTabChange('logs')}
-            sx={{ mr: 1 }}
+            style={{ marginRight: 10 }}
           >
             Logs
           </Button>
@@ -704,152 +720,159 @@ const LogDashboard = () => {
           >
             Estatísticas
           </Button>
+          <Box flexGrow={1} />
+          <Button 
+            startIcon={<RefreshIcon />} 
+            onClick={handleRefresh}
+          >
+            Atualizar
+          </Button>
         </Box>
-        
-        {activeTab === 'logs' && (
-          <>
-            {/* Filtros */}
-            <Paper elevation={2} style={{ padding: 20, marginBottom: 20 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Filtros</Typography>
-                <Button 
-                  startIcon={<FilterListIcon />}
-                  onClick={toggleFilters}
-                  variant="outlined"
-                  size="small"
-                >
-                  {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-                </Button>
-              </Box>
+      </Paper>
+      
+      {/* Filtros para logs */}
+      {activeTab === 'logs' && (
+        <Paper elevation={2} style={{ marginBottom: 20, padding: 16 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">Filtros</Typography>
+            <Button 
+              startIcon={<FilterListIcon />} 
+              onClick={toggleFilters}
+              size="small"
+            >
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            </Button>
+          </Box>
+          
+          {showFilters && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Nível</InputLabel>
+                  <Select 
+                    value={level} 
+                    onChange={handleLevelChange}
+                    label="Nível"
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="debug">Debug</MenuItem>
+                    <MenuItem value="info">Info</MenuItem>
+                    <MenuItem value="warning">Warning</MenuItem>
+                    <MenuItem value="error">Error</MenuItem>
+                    <MenuItem value="critical">Critical</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
               
-              {showFilters && (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={2}>
-                    <FormControl fullWidth>
-                      <InputLabel>Nível</InputLabel>
-                      <Select value={level} onChange={handleLevelChange} label="Nível">
-                        <MenuItem value="">Todos</MenuItem>
-                        <MenuItem value="debug">Debug</MenuItem>
-                        <MenuItem value="info">Info</MenuItem>
-                        <MenuItem value="warning">Warning</MenuItem>
-                        <MenuItem value="error">Error</MenuItem>
-                        <MenuItem value="critical">Critical</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <FormControl fullWidth>
-                      <InputLabel>Categoria</InputLabel>
-                      <Select value={category} onChange={handleCategoryChange} label="Categoria">
-                        <MenuItem value="">Todas</MenuItem>
-                        <MenuItem value="system">System</MenuItem>
-                        <MenuItem value="security">Security</MenuItem>
-                        <MenuItem value="user">User</MenuItem>
-                        <MenuItem value="notification">Notification</MenuItem>
-                        <MenuItem value="automation">Automation</MenuItem>
-                        <MenuItem value="database">Database</MenuItem>
-                        <MenuItem value="api">API</MenuItem>
-                        <MenuItem value="performance">Performance</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <DatePicker
-                      label="Data Inicial"
-                      value={startDate}
-                      onChange={(date) => setStartDate(date)}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <DatePicker
-                      label="Data Final"
-                      value={endDate}
-                      onChange={(date) => setEndDate(date)}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      label="ID do Usuário"
-                      value={userId}
-                      onChange={handleUserIdChange}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      label="ID da Requisição"
-                      value={requestId}
-                      onChange={handleRequestIdChange}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <FormControl fullWidth>
-                      <InputLabel>Arquivo de Log</InputLabel>
-                      <Select value={selectedDate || ''} onChange={(e) => handleDateChange(e.target.value)} label="Arquivo de Log">
-                        <MenuItem value="">Logs em Memória</MenuItem>
-                        {availableDates.map((date) => (
-                          <MenuItem key={date} value={date}>{date}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Button 
-                      variant="contained" 
-                      color="primary" 
-                      onClick={handleSearch}
-                      fullWidth
-                      style={{ height: '100%' }}
-                    >
-                      Buscar
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Button 
-                      variant="outlined" 
-                      onClick={handleClearFilters}
-                      fullWidth
-                      style={{ height: '100%' }}
-                    >
-                      Limpar Filtros
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <FormControl fullWidth>
-                      <InputLabel>Limite</InputLabel>
-                      <Select value={limit} onChange={handleLimitChange} label="Limite">
-                        <MenuItem value={10}>10</MenuItem>
-                        <MenuItem value={25}>25</MenuItem>
-                        <MenuItem value={50}>50</MenuItem>
-                        <MenuItem value={100}>100</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-              )}
-            </Paper>
-            
-            {/* Mensagem de erro */}
-            {error && (
-              <Alert severity="error" style={{ marginBottom: 20 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {/* Tabela de logs */}
-            {renderLogsTable()}
-            
-            {/* Modal de detalhes do log */}
-            {renderLogDetails()}
-          </>
-        )}
-        
-        {activeTab === 'statistics' && renderStatistics()}
-      </Container>
-    </LocalizationProvider>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Categoria</InputLabel>
+                  <Select 
+                    value={category} 
+                    onChange={handleCategoryChange}
+                    label="Categoria"
+                  >
+                    <MenuItem value="">Todas</MenuItem>
+                    {statistics && Object.keys(statistics.by_category || {}).map((cat) => (
+                      <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <TextField 
+                  label="ID do Usuário" 
+                  fullWidth 
+                  value={userId}
+                  onChange={handleUserIdChange}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <TextField 
+                  label="ID da Requisição" 
+                  fullWidth 
+                  value={requestId}
+                  onChange={handleRequestIdChange}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} locale={ptBR}>
+                  <DatePicker 
+                    label="Data Inicial"
+                    value={startDate}
+                    onChange={(newValue) => setStartDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} locale={ptBR}>
+                  <DatePicker 
+                    label="Data Final"
+                    value={endDate}
+                    onChange={(newValue) => setEndDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Arquivo de Log</InputLabel>
+                  <Select 
+                    value={selectedDate || ''}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    label="Arquivo de Log"
+                  >
+                    <MenuItem value="">Logs Atuais</MenuItem>
+                    {availableDates.map((date) => (
+                      <MenuItem key={date} value={date}>{date}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={3}>
+                <Box display="flex" gap={1} height="100%" alignItems="center">
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={handleSearch}
+                    fullWidth
+                  >
+                    Buscar
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    onClick={handleClearFilters}
+                    fullWidth
+                  >
+                    Limpar
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          )}
+        </Paper>
+      )}
+      
+      {/* Exibir erro se houver */}
+      {error && (
+        <Alert severity="error" style={{ marginBottom: 20 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {/* Conteúdo da aba selecionada */}
+      {activeTab === 'logs' ? renderLogsTable() : renderStatistics()}
+      
+      {/* Modal de detalhes do log */}
+      {renderLogDetails()}
+    </Container>
   );
 };
 

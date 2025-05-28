@@ -10,6 +10,7 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Dialog } from 'primereact/dialog';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/variables.css';
 
 const TaskMonitor = () => {
     const [tasks, setTasks] = useState([]);
@@ -170,7 +171,7 @@ const TaskMonitor = () => {
                         <div className="p-col-12">
                             <h3>Resultado</h3>
                             <pre style={{ 
-                                backgroundColor: '#f5f5f5', 
+                                backgroundColor: 'var(--gray-100)', 
                                 padding: '10px', 
                                 borderRadius: '5px',
                                 overflow: 'auto',

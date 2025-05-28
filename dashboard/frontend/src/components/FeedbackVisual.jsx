@@ -9,10 +9,10 @@ const StatusNotification = ({ type, message, timestamp, onDismiss }) => {
       case 'success':
         return {
           icon: <CheckCircle size={20} />,
-          bgColor: 'bg-green-50',
-          textColor: 'text-green-800',
-          borderColor: 'border-green-200',
-          iconColor: 'text-green-500'
+          bgColor: 'bg-emerald-50',
+          textColor: 'text-emerald-800',
+          borderColor: 'border-emerald-200',
+          iconColor: 'text-emerald-500'
         };
       case 'error':
         return {
@@ -94,11 +94,11 @@ const ProgressIndicator = ({ progress, status, label }) => {
   // Determinar cor com base no status
   const getStatusColor = () => {
     switch (status) {
-      case 'success': return 'bg-green-500';
+      case 'success': return 'bg-emerald-500';
       case 'error': return 'bg-red-500';
       case 'warning': return 'bg-amber-500';
       case 'processing': return 'bg-purple-500';
-      default: return 'bg-blue-500';
+      default: return 'bg-primary';
     }
   };
 
@@ -106,14 +106,14 @@ const ProgressIndicator = ({ progress, status, label }) => {
 
   return (
     <div className="mb-4">
-      {label && <p className="text-sm text-[#555] mb-1">{label}</p>}
+      {label && <p className="text-sm text-muted mb-1">{label}</p>}
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div 
           className={`h-full ${statusColor} transition-all duration-500 ease-out`}
           style={{ width: `${progress}%` }}
         ></div>
       </div>
-      <p className="text-xs text-[#777] mt-1 text-right">{progress}% concluído</p>
+      <p className="text-xs text-muted mt-1 text-right">{progress}% concluído</p>
     </div>
   );
 };
@@ -124,7 +124,7 @@ const StatusIndicator = ({ status, label, animate = false }) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'online':
-        return { color: 'bg-green-500', text: 'Online', textColor: 'text-green-800' };
+        return { color: 'bg-emerald-500', text: 'Online', textColor: 'text-emerald-800' };
       case 'offline':
         return { color: 'bg-red-500', text: 'Offline', textColor: 'text-red-800' };
       case 'processing':
@@ -140,7 +140,7 @@ const StatusIndicator = ({ status, label, animate = false }) => {
   
   return (
     <div className="flex items-center">
-      {label && <span className="text-sm text-[#555] mr-2">{label}:</span>}
+      {label && <span className="text-sm text-muted mr-2">{label}:</span>}
       <div className="flex items-center">
         <span className={`inline-block w-2.5 h-2.5 rounded-full ${config.color} ${animate ? 'animate-pulse' : ''} mr-1.5`}></span>
         <span className={`text-xs font-medium ${config.textColor}`}>{config.text}</span>
@@ -165,7 +165,7 @@ const Toast = ({ message, type = 'info', duration = 5000, onClose }) => {
   const getTypeConfig = () => {
     switch (type) {
       case 'success':
-        return { icon: <CheckCircle size={18} />, bgColor: 'bg-green-500' };
+        return { icon: <CheckCircle size={18} />, bgColor: 'bg-emerald-500' };
       case 'error':
         return { icon: <AlertCircle size={18} />, bgColor: 'bg-red-500' };
       case 'warning':
@@ -173,14 +173,14 @@ const Toast = ({ message, type = 'info', duration = 5000, onClose }) => {
       case 'processing':
         return { icon: <RefreshCw size={18} className="animate-spin" />, bgColor: 'bg-purple-500' };
       default:
-        return { icon: <Bell size={18} />, bgColor: 'bg-blue-500' };
+        return { icon: <Bell size={18} />, bgColor: 'bg-primary' };
     }
   };
   
   const config = getTypeConfig();
   
   return (
-    <div className={`${config.bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center animate-slideIn max-w-md`}>
+    <div className={`${config.bgColor} text-card px-4 py-3 rounded-lg shadow-lg flex items-center animate-slideIn max-w-md`}>
       <div className="mr-3">
         {config.icon}
       </div>
@@ -190,7 +190,7 @@ const Toast = ({ message, type = 'info', duration = 5000, onClose }) => {
       {onClose && (
         <button 
           onClick={onClose} 
-          className="ml-3 p-1 rounded-full hover:bg-white/20 text-white"
+          className="ml-3 p-1 rounded-full hover:bg-white/20 text-card"
           aria-label="Fechar notificação"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -218,7 +218,7 @@ const LoadingSpinner = ({ size = 'medium', color = 'primary', label }) => {
   const getColor = () => {
     switch (color) {
       case 'white': return 'border-white/30 border-t-white';
-      case 'success': return 'border-green-200 border-t-green-500';
+      case 'success': return 'border-emerald-200 border-t-emerald-500';
       case 'error': return 'border-red-200 border-t-red-500';
       default: return 'border-purple-200 border-t-purple-500';
     }
@@ -230,7 +230,7 @@ const LoadingSpinner = ({ size = 'medium', color = 'primary', label }) => {
   return (
     <div className="flex items-center justify-center">
       <div className={`${sizeClass} ${colorClass} rounded-full animate-spin`}></div>
-      {label && <span className="ml-3 text-sm text-[#555]">{label}</span>}
+      {label && <span className="ml-3 text-sm text-muted">{label}</span>}
     </div>
   );
 };

@@ -1,23 +1,28 @@
 import { ClipboardList, CheckCircle, Clock } from "lucide-react";
+import '../styles/variables.css';
 
+// Definindo cores como variáveis para facilitar manutenção
 const cards = [
   {
     title: "WO Abertas",
     value: 4,
     icon: ClipboardList,
-    color: "#FF6F61",
+    colorClass: "text-red-500",
+    bgClass: "bg-red-50",
   },
   {
     title: "WO Concluídas",
     value: 12,
     icon: CheckCircle,
-    color: "#4CAF50",
+    colorClass: "text-emerald-500",
+    bgClass: "bg-emerald-50",
   },
   {
     title: "WO Pendentes",
     value: 2,
     icon: Clock,
-    color: "#FFA726",
+    colorClass: "text-amber-500",
+    bgClass: "bg-amber-50",
   },
 ];
 
@@ -27,17 +32,16 @@ const DashboardCards = () => {
       {cards.map((card, index) => (
         <div
           key={index}
-          className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4"
+          className="bg-card p-4 rounded-2xl shadow-md flex items-center gap-4"
         >
           <div
-            className="p-3 rounded-xl"
-            style={{ backgroundColor: `${card.color}22` }}
+            className={`p-3 rounded-xl ${card.bgClass}`}
           >
-            <card.icon color={card.color} size={28} />
+            <card.icon className={card.colorClass} size={28} />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm text-[#777]">{card.title}</span>
-            <span className="text-2xl font-bold text-[#333]">{card.value}</span>
+            <span className="text-sm text-muted">{card.title}</span>
+            <span className="text-2xl font-bold text-text">{card.value}</span>
           </div>
         </div>
       ))}

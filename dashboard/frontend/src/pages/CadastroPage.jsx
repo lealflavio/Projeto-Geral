@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import '../styles/variables.css';
 // import { GoogleLogin } from '@react-oauth/google'; // Descomente quando integrar Google
 
 const CadastroPage = () => {
@@ -75,35 +76,35 @@ const CadastroPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9] px-4">
-      <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-sm">
-        <h2 className="text-2xl font-semibold text-[#333] text-center mb-6">Criar Conta</h2>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="bg-card p-6 rounded-2xl shadow-md w-full max-w-sm">
+        <h2 className="text-2xl font-semibold text-text text-center mb-6">Criar Conta</h2>
         <form onSubmit={handleCadastro} className="space-y-4">
           <div>
-            <label className="block text-sm text-[#777]">Nome</label>
+            <label className="block text-sm text-muted">Nome</label>
             <input
               type="text"
-              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-[#777]">Email</label>
+            <label className="block text-sm text-muted">Email</label>
             <input
               type="email"
-              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="relative">
-            <label className="block text-sm text-[#777]">Senha</label>
+            <label className="block text-sm text-muted">Senha</label>
             <input
               type={mostrarSenha ? "text" : "password"}
-              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
@@ -116,29 +117,29 @@ const CadastroPage = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm text-[#777]">WhatsApp</label>
+            <label className="block text-sm text-muted">WhatsApp</label>
             <input
               type="text"
-              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full mt-1 border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               required
             />
           </div>
           {erro && <p className="text-red-500 text-sm">{erro}</p>}
-          {sucesso && <p className="text-green-600 text-sm">{sucesso}</p>}
+          {sucesso && <p className="text-emerald-600 text-sm">{sucesso}</p>}
           <button
             type="submit"
-            className="w-full bg-[#7C3AED] text-white py-2 rounded-lg font-semibold hover:bg-[#6B21A8]"
+            className="w-full bg-primary text-card py-2 rounded-lg font-semibold hover:bg-primary-dark"
             disabled={carregando}
           >
             {carregando ? "Criando..." : "Criar Conta"}
           </button>
         </form>
-        <p className="text-sm text-center text-[#777] mt-4">
+        <p className="text-sm text-center text-muted mt-4">
           Já tem uma conta?{" "}
           <span
-            className="text-[#7C3AED] hover:underline cursor-pointer"
+            className="text-primary hover:underline cursor-pointer"
             onClick={() => navigate("/")}
           >
             Faça login

@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './styles/variables.css';
+
 /* Otimizações para dispositivos móveis */
 .mobile-device button,
 .mobile-device a,
@@ -17,7 +19,7 @@
 
 /* Melhorias de acessibilidade para foco */
 :focus {
-  outline: 2px solid #7C3AED;
+  outline: 2px solid var(--purple-600);
   outline-offset: 2px;
 }
 
@@ -72,7 +74,7 @@
   
   body {
     font-size: 12pt;
-    color: #000;
-    background-color: #fff;
+    color: var(--text);
+    background-color: var(--card);
   }
 }
