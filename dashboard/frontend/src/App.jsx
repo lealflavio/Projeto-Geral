@@ -4,7 +4,7 @@ import CadastroPage from "./pages/CadastroPage";
 import Dashboard from "./pages/Dashboard";
 import Creditos from "./pages/Creditos";
 import WorkOrderAllocation from './pages/WorkOrderAllocation';
-import Simulador from "./pages/Simulador";
+import EstimativaGanhos from "./pages/EstimativaGanhos";
 import MinhasWOs from "./pages/MinhasWOs";
 import MapaKMs from "./pages/MapaKMs";
 import Perfil from "./pages/Perfil";
@@ -30,7 +30,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creditos" element={<Creditos />} />
           <Route path="/alocar-wo" element={<WorkOrderAllocation />} />
-          <Route path="/simulador" element={<Simulador />} />
+          <Route path="/estimativa-ganhos" element={<EstimativaGanhos />} />
           <Route path="/wos" element={<MinhasWOs />} />
           <Route path="/mapa-kms" element={<MapaKMs />} />
           <Route path="/perfil" element={<Perfil />} />
