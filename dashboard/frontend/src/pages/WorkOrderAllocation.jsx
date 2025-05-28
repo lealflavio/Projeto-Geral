@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, Share2, Clipboard, ArrowRight } from "lucide-react";
+import { Search, MapPin, Share2, Clipboard, ArrowRight, X, Clock, Phone, Package, FileText, RefreshCw, History, ChevronRight } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
 
@@ -387,141 +387,290 @@ const WorkOrderAllocation = () => {
   };
 
   return (
-    <div className="p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-[#333] mb-4">Alocação de Work Order</h1>
+    <div className="p-4 max-w-full">
+      {/* Cabeçalho com título e ações */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="bg-purple-100 p-2 rounded-lg">
+            <FileText size={20} className="text-primary" />
+          </div>
+          <h1 className="text-lg font-semibold text-text">Alocação de WO</h1>
+        </div>
+      </div>
+      
       {/* Formulário de busca */}
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-3">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+        <div className="flex flex-col gap-3">
           <div className="flex-1">
-            <label htmlFor="wo-search" className="block text-sm text-[#555] mb-2">
+            <label htmlFor="wo-search" className="block text-sm font-medium text-muted mb-2">
               Número da Work Order
             </label>
-            <input
-              id="wo-search"
-              type="text"
-              placeholder="Ex: 12345678"
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-[#333]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-            />
+            <div className="relative">
+              <input
+                id="wo-search"
+                type="text"
+                placeholder="Ex: 12345678"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-3 pl-3 pr-10 text-text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              />
+              {searchTerm && (
+                <button 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setSearchTerm('')}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
-          <div className="md:self-end">
+          <div>
             <button
-              className="w-full md:w-auto bg-[#7C3AED] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#6B21A8] transition flex items-center justify-center gap-2"
+              className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
               onClick={handleSearch}
               disabled={isSearching}
             >
               {isSearching ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <RefreshCw size={18} className="animate-spin" />
                   <span>Buscando...</span>
                 </>
               ) : (
                 <>
                   <Search size={18} />
-                  <span>Buscar</span>
+                  <span>Buscar WO</span>
                 </>
               )}
             </button>
-            <p className="text-xs text-[#777] mt-1 text-center md:text-left">Esse processo costuma levar 1 minuto</p>
+            <p className="text-xs text-muted mt-1 text-center">Esse processo costuma levar 1 minuto</p>
           </div>
         </div>
         
         {/* Barra de progresso */}
         {isSearching && (
           <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-1 overflow-hidden">
               <div 
-                className="bg-[#7C3AED] h-2.5 rounded-full transition-all duration-500 ease-out"
+                className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <p className="text-xs text-[#777] text-right">{Math.round(progress)}%</p>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted">Buscando informações...</p>
+              <p className="text-xs text-muted">{Math.round(progress)}%</p>
+            </div>
           </div>
         )}
       </div>
       
       {/* Histórico de WOs */}
       {historicoWOs.length > 0 && !searchResult && (
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-[#333] mb-3">Histórico de WOs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {historicoWOs.slice(0, 6).map((wo) => (
-              <div 
-                key={wo.numero}
-                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                onClick={() => carregarWOHistorico(wo.numero)}
-              >
-                <p className="font-medium text-[#7C3AED]">WO {wo.numero}</p>
-                <p className="text-sm text-[#555] truncate">{wo.morada}</p>
-                <p className="text-xs text-[#777] mt-1">
-                  {new Date(wo.timestamp).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-4">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History size={18} className="text-primary" />
+              <h2 className="text-base font-medium text-text">Histórico de WOs</h2>
+            </div>
+          </div>
+          
+          <div className="p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {historicoWOs.slice(0, 6).map((wo) => (
+                <div 
+                  key={wo.numero}
+                  className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors flex items-center justify-between"
+                  onClick={() => carregarWOHistorico(wo.numero)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-primary">WO {wo.numero}</p>
+                    <p className="text-sm text-muted truncate">{wo.morada}</p>
+                    <p className="text-xs text-muted mt-1">
+                      {new Date(wo.timestamp).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-muted flex-shrink-0 ml-2" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
       
       {/* Resultado da busca */}
       {searchResult && (
-        <div className={`bg-white rounded-xl shadow overflow-hidden relative ${showCompletionEffect ? 'animate-pulse' : ''}`}>
+        <div className={`bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden relative ${showCompletionEffect ? 'animate-pulse' : ''}`}>
           {/* Efeito de conclusão */}
           {showCompletionEffect && (
-            <div className="absolute inset-0 bg-purple-100 opacity-30 animate-ping rounded-xl"></div>
+            <div className="absolute inset-0 bg-purple-100 opacity-30 animate-ping rounded-lg"></div>
           )}
           
           {/* Cabeçalho */}
-          <div className="bg-[#7C3AED] p-4 text-white flex justify-between items-center">
+          <div className="bg-primary p-4 text-white flex justify-between items-center">
             <div>
               <h2 className="text-lg font-semibold">WO {searchResult.numero}</h2>
-              <p className="text-sm text-purple-200">{searchResult.observacoes}</p>
+              <p className="text-sm opacity-90">{searchResult.observacoes}</p>
             </div>
             <div className="flex gap-2">
               <button
-                className="p-2 rounded-full hover:bg-purple-700 transition"
+                className="p-2 rounded-full hover:bg-purple-700 transition-colors"
                 onClick={handleShare}
                 title="Compartilhar"
+                aria-label="Compartilhar detalhes da WO"
               >
                 <Share2 size={20} />
+              </button>
+              <button
+                className="p-2 rounded-full hover:bg-purple-700 transition-colors"
+                onClick={abrirMapa}
+                title="Abrir no mapa"
+                aria-label="Abrir localização no mapa"
+              >
+                <MapPin size={20} />
               </button>
             </div>
           </div>
           {/* Conteúdo */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Coluna 1 */}
               <div>
                 {/* SLID */}
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">SLID</h3>
-                  <div className="flex items-start gap-2">
-                    <p className="text-[#333] font-medium flex-1">{searchResult.slid || "CAKIBALE"}</p>
-                    <button
-                      className={`text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
-                      onClick={() => handleCopyToClipboard(searchResult.slid || "CAKIBALE", 'slid')}
-                      title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted">SLID</label>
+                    <button 
+                      className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                      onClick={() => handleCopyToClipboard(searchResult.slid, 'slid')}
                     >
-                      <Clipboard size={16} />
+                      <Clipboard size={14} />
+                      <span>{copiedField === 'slid' ? 'Copiado!' : 'Copiar'}</span>
                     </button>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-text">
+                    {searchResult.slid}
+                  </div>
+                </div>
+                {/* Acesso */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted">Acesso</label>
+                    <button 
+                      className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                      onClick={() => handleCopyToClipboard(searchResult.acesso, 'acesso')}
+                    >
+                      <Clipboard size={14} />
+                      <span>{copiedField === 'acesso' ? 'Copiado!' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-text">
+                    {searchResult.acesso}
+                  </div>
+                </div>
+                
+                {/* Morada */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted">Morada</label>
+                    <button 
+                      className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                      onClick={() => handleCopyToClipboard(searchResult.morada, 'morada')}
+                    >
+                      <Clipboard size={14} />
+                      <span>{copiedField === 'morada' ? 'Copiado!' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-text">
+                    {searchResult.morada}
                   </div>
                 </div>
                 
                 {/* Fibra */}
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">Fibra</h3>
-                  <div className="flex items-center gap-2">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted">Fibra</label>
+                    <button 
+                      className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                      onClick={() => handleCopyToClipboard(searchResult.corFibra, 'fibra')}
+                    >
+                      <Clipboard size={14} />
+                      <span>{copiedField === 'fibra' ? 'Copiado!' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-text flex items-center gap-2">
                     {determinarCorFibra(searchResult.corFibra) && (
                       <div 
                         className="w-4 h-4 rounded-full" 
                         style={{ backgroundColor: determinarCorFibra(searchResult.corFibra).hex }}
                       ></div>
                     )}
-                    <p className="text-[#333]">{searchResult.corFibra}</p>
+                    {searchResult.corFibra}
+                  </div>
+                </div>
+                
+                {/* Coluna 2 */}
+                <div>
+                  {/* Tipo de Box */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-muted">Tipo de Box</label>
+                      <button 
+                        className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                        onClick={() => handleCopyToClipboard(searchResult.tipoBox, 'tipoBox')}
+                      >
+                        <Clipboard size={14} />
+                        <span>{copiedField === 'tipoBox' ? 'Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-text">
+                      {searchResult.tipoBox}
+                    </div>
+                  </div>
+                  
+                  {/* Número de Box */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-muted">Número de Box</label>
+                      <button 
+                        className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                        onClick={() => handleCopyToClipboard(searchResult.numBox, 'numBox')}
+                      >
+                        <Clipboard size={14} />
+                        <span>{copiedField === 'numBox' ? 'Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-text">
+                      {searchResult.numBox}
+                    </div>
+                  </div>
+                  
+                  {/* Telefone */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-muted">Telefone</label>
+                      <button 
+                        className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
+                        onClick={() => handleCopyToClipboard(searchResult.telefone, 'telefone')}
+                      >
+                        <Clipboard size={14} />
+                        <span>{copiedField === 'telefone' ? 'Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-text">
+                      {searchResult.telefone}
+                    </div>
+                  </div>
+                  
+                  {/* Data e Horário */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-muted">Agendamento</label>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-text flex items-center gap-2">
+                      <Clock size={16} className="text-primary" />
+                      <span>{searchResult.dataAgendamento} - {searchResult.horario}</span>
+                    </div>
+                  </div>
                   </div>
                 </div>
                 
