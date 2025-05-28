@@ -1,608 +1,408 @@
-import React, { useState, useEffect } from "react";
-import { Search, MapPin, Share2, Clipboard, ArrowRight } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://SEU_BACKEND_URL"; // Ajuste conforme seu backend
-
-// Função para limpar e formatar a morada
-const formatarMorada = (morada) => {
-  if (!morada) return "N/A";
-  
-  // Remove colchetes, traços duplos e espaços extras
-  return morada
-    .replace(/[\[\]]/g, '')
-    .replace(/\s-\s-\s/g, ', ')
-    .replace(/\s-\s/g, ', ')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-// Função para extrair informações específicas do texto do cliente
-const extrairInformacoes = (textoCliente) => {
-  if (!textoCliente) return {};
-  
-  // Extrair Acesso (9 dígitos após "Access:")
-  const accessMatch = textoCliente.match(/Access:(\d{9})/);
-  const acesso = accessMatch ? accessMatch[1] : "N/A";
-  
-  // Extrair Nº de Box
-  const boxMatch = textoCliente.match(/NUMERO_TV_BOXES:\s*(\d+)/);
-  const numBox = boxMatch ? boxMatch[1] : "N/A";
-  
-  // Extrair Tipo de Box
-  const tipoBoxMatch = textoCliente.match(/Set-Top-Boxes:\s*([^V][^\n]+?)(?=\s+Velocidade)/);
-  const tipoBox = tipoBoxMatch ? tipoBoxMatch[1].trim() : "N/A";
-  
-  // Extrair Telefone
-  const telefoneMatch = textoCliente.match(/Entrega de equipamentos:\s*([^\n]+?)(?=\s+Modelo)/);
-  const telefone = telefoneMatch ? telefoneMatch[1].trim() : "N/A";
-  
-  // Extrair SLID (se existir no texto)
-  const slidMatch = textoCliente.match(/SLID:\s*([^\s,;]+)/);
-  const slid = slidMatch ? slidMatch[1] : "";
-  
-  return { acesso, numBox, tipoBox, telefone, slid };
-};
-
-// Função para formatar o estado da WO (primeira letra maiúscula de cada palavra)
-const formatarEstadoWO = (estado) => {
-  if (!estado) return "N/A";
-  
-  return estado
-    .toLowerCase()
-    .split(' ')
-    .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
-    .join(' ');
-};
-
-// Função para determinar a cor da fibra
-const determinarCorFibra = (nomeFibra) => {
-  if (!nomeFibra || nomeFibra === "N/A") return null;
-  
-  const cores = {
-    'azul': '#1E90FF',
-    'amarelo': '#FFD700',
-    'vermelho': '#FF4500',
-    'preto': '#000000',
-    'laranja': '#FFA500',
-    'ciano': '#00FFFF',
-    'castanho': '#8B4513',
-    'cinza': '#808080',
-    'branco': '#FFFFFF',
-    'verde': '#32CD32',
-    'violeta': '#8A2BE2',
-    'rosa': '#FF69B4',
-    'turquesa': '#40E0D0'
-  };
-  
-  // Verificar se o nome da fibra contém alguma das cores
-  for (const [cor, hex] of Object.entries(cores)) {
-    if (nomeFibra.toLowerCase().includes(cor)) {
-      return { nome: cor, hex };
-    }
-  }
-  
-  return null;
-};
-
-// Função para salvar WO no cache
-const salvarWOCache = (woData) => {
-  try {
-    // Obter cache atual
-    const cacheString = localStorage.getItem('woCache');
-    const cache = cacheString ? JSON.parse(cacheString) : {};
-    
-    // Adicionar nova entrada com timestamp
-    cache[woData.numero] = {
-      data: woData,
-      timestamp: Date.now(),
-      expira: Date.now() + (3 * 24 * 60 * 60 * 1000) // 3 dias em milissegundos
-    };
-    
-    // Salvar cache atualizado
-    localStorage.setItem('woCache', JSON.stringify(cache));
-  } catch (error) {
-    console.error("Erro ao salvar WO no cache:", error);
-  }
-};
-
-// Função para obter WO do cache
-const obterWOCache = (woNumero) => {
-  try {
-    const cacheString = localStorage.getItem('woCache');
-    if (!cacheString) return null;
-    
-    const cache = JSON.parse(cacheString);
-    const entry = cache[woNumero];
-    
-    // Verificar se existe e não expirou
-    if (entry && entry.expira > Date.now()) {
-      return entry.data;
-    }
-    
-    // Se expirou, remover do cache
-    if (entry) {
-      delete cache[woNumero];
-      localStorage.setItem('woCache', JSON.stringify(cache));
-    }
-    
-    return null;
-  } catch (error) {
-    console.error("Erro ao obter WO do cache:", error);
-    return null;
-  }
-};
-
-// Função para obter histórico de WOs recentes
-const obterHistoricoWOs = () => {
-  try {
-    const cacheString = localStorage.getItem('woCache');
-    if (!cacheString) return [];
-    
-    const cache = JSON.parse(cacheString);
-    const agora = Date.now();
-    
-    // Filtrar entradas não expiradas e ordenar por timestamp (mais recentes primeiro)
-    return Object.entries(cache)
-      .filter(([_, entry]) => entry.expira > agora)
-      .map(([numero, entry]) => ({
-        numero,
-        morada: entry.data.morada,
-        timestamp: entry.timestamp
-      }))
-      .sort((a, b) => b.timestamp - a.timestamp);
-  } catch (error) {
-    console.error("Erro ao obter histórico de WOs:", error);
-    return [];
-  }
-};
+import { useState, useEffect } from "react";
+import { useUser } from "../hooks/useUser";
+import { useAuthContext } from "../context/AuthContext";
+import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader } from "lucide-react";
+import CardInfo from "../components/CardInfo";
+import { toast } from "react-toastify";
 
 const WorkOrderAllocation = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [workOrderNumber, setWorkOrderNumber] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchResult, setSearchResult] = useState(null);
-  const [usuario, setUsuario] = useState(null);
-  const [historicoWOs, setHistoricoWOs] = useState([]);
-  const [copiedField, setCopiedField] = useState('');
+  const [copiedField, setCopiedField] = useState(null);
+  const [workOrderData, setWorkOrderData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [showCompletionEffect, setShowCompletionEffect] = useState(false);
+  const [progressInterval, setProgressInterval] = useState(null);
+  
+  const { user } = useUser();
+  const { authToken } = useAuthContext();
 
-  // Carrega sempre o usuário atualizado da API ao montar o componente
+  // Limpar intervalo quando componente é desmontado
   useEffect(() => {
-    const fetchUsuario = async () => {
-      try {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          alert("Token de autenticação não encontrado. Faça login novamente.");
-          return;
-        }
-        const response = await fetch(`${API_BASE_URL}/usuarios/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) throw new Error("Erro ao buscar usuário");
-        const dados = await response.json();
-        setUsuario(dados);
-        // Atualiza o localStorage para manter sincronizado
-        localStorage.setItem("usuario", JSON.stringify(dados));
-      } catch (err) {
-        alert("Erro ao buscar usuário. Faça login novamente.");
-      }
-    };
-    
-    fetchUsuario();
-    
-    // Carregar histórico de WOs
-    setHistoricoWOs(obterHistoricoWOs());
-  }, []);
-
-  // Efeito para simular o progresso durante a busca
-  useEffect(() => {
-    let progressInterval;
-    
-    if (isSearching) {
-      setProgress(0);
-      
-      // Simular progresso ao longo de 60 segundos
-      progressInterval = setInterval(() => {
-        setProgress(prevProgress => {
-          // Aumentar o progresso de forma não linear para parecer mais natural
-          const newProgress = prevProgress + (100 - prevProgress) / 60;
-          return newProgress >= 99 ? 99 : newProgress;
-        });
-      }, 1000);
-    } else if (progress > 0 && progress < 100) {
-      // Quando a busca termina, completar o progresso e mostrar efeito
-      setProgress(100);
-      setTimeout(() => {
-        setShowCompletionEffect(true);
-        setTimeout(() => setShowCompletionEffect(false), 1000);
-      }, 300);
-    }
-    
     return () => {
-      if (progressInterval) clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     };
-  }, [isSearching, progress]);
+  }, [progressInterval]);
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      alert("Informe o número da WO.");
-      return;
-    }
-    if (!usuario?.usuario_portal || !usuario?.senha_portal) {
-      alert("Credenciais do portal Wondercom não cadastradas. Cadastre no Perfil antes de usar esta função.");
+  const handleChange = (e) => {
+    setWorkOrderNumber(e.target.value);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!workOrderNumber.trim()) {
+      toast.error("Por favor, insira um número de WO válido");
       return;
     }
     
-    // Verificar se a WO está no cache
-    const cachedWO = obterWOCache(searchTerm);
-    if (cachedWO) {
-      setSearchResult(cachedWO);
-      return;
-    }
-
-    setIsSearching(true);
-
+    setIsLoading(true);
+    setError(null);
+    setSearchResult(null);
+    setProgress(0);
+    
+    // Iniciar a barra de progresso
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + (100 / 60); // Incremento para completar em 60 segundos
+      });
+    }, 1000);
+    
+    setProgressInterval(interval);
+    
     try {
-      // Obter token de autenticação
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        alert("Token de autenticação não encontrado. Faça login novamente.");
-        setIsSearching(false);
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/wondercom/allocate`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Incluir token de autenticação
+      const response = await fetch(`/api/wondercom/allocate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          work_order_id: searchTerm,
-          credentials: {
-            username: usuario.usuario_portal,
-            password: usuario.senha_portal
-          }
-        })
+          workOrderNumber,
+          technicianId: user?.id,
+        }),
       });
       
+      const data = await response.json();
+      
+      // Limpar o intervalo quando os dados retornarem
+      clearInterval(interval);
+      setProgressInterval(null);
+      
       if (!response.ok) {
-        if (response.status === 401) {
-          alert("Sessão expirada. Por favor, faça login novamente.");
-          // Redirecionar para login ou limpar token
-          localStorage.removeItem("authToken");
-          window.location.href = "/login";
-          return;
-        }
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        setError(data.message || "Erro ao alocar WO");
+        setProgress(100); // Completar a barra mesmo em caso de erro
+        setIsLoading(false);
+        return;
       }
       
-      const data = await response.json();
-      if (data.status === 'success' && data.data) {
-        // Extrair informações do cliente
-        const infoCliente = extrairInformacoes(data.data.descricao || "");
-        
-        // Formatar morada
-        const moradaFormatada = formatarMorada(data.data.endereco);
-        
-        // Formatar estado da WO
-        const estadoFormatado = formatarEstadoWO(data.data.estado || data.data.observacoes || "");
-        
-        // Criar objeto de resultado
-        const resultado = {
-          numero: searchTerm,
-          cliente: data.data.descricao || "N/A",
-          morada: moradaFormatada,
-          coordenadas: {
-            lat: data.data.latitude || 0,
-            lng: data.data.longitude || 0
-          },
-          corFibra: data.data.cor_fibra || "N/A",
-          tipoServico: data.data.tipo_servico || "N/A",
-          dataAgendamento: data.data.data_agendamento || "N/A",
-          horario: data.data.horario || "N/A",
-          observacoes: estadoFormatado,
-          // Informações extraídas
-          acesso: infoCliente.acesso,
-          numBox: infoCliente.numBox,
-          tipoBox: infoCliente.tipoBox,
-          telefone: infoCliente.telefone,
-          slid: infoCliente.slid || data.data.slid || "CAKIBALE" // Valor fixo temporário
-        };
-        
-        setSearchResult(resultado);
-        
-        // Salvar no cache
-        salvarWOCache(resultado);
-        
-        // Atualizar histórico
-        setHistoricoWOs(obterHistoricoWOs());
-      } else {
-        alert('Erro ao alocar WO: ' + (data.error || data.message || 'Erro desconhecido'));
-        setSearchResult(null);
-      }
-    } catch (error) {
-      alert("Erro: " + error.message);
-      setSearchResult(null);
+      // Simular dados para demonstração
+      const mockResult = {
+        wo: workOrderNumber,
+        slid: "CAKIBALE",
+        corFibra: "Azul",
+        morada: "Rua das Flores, 123, Lisboa",
+        acesso: "Portão principal",
+        numBox: "B-4578",
+        tipoBox: "Fibra Óptica",
+        telefone: "Sim",
+        dataAgendamento: "28/05/2025",
+        horario: "14:00 - 16:00",
+        status: "pendente",
+        tipoInstalacao: "Fibra + TV",
+        tecnico: user?.name || "Técnico",
+        endereco: "Rua das Flores, 123, Lisboa",
+        coordenadas: "38.7223° N, 9.1393° W",
+        observacoes: "Cliente solicitou instalação rápida. Levar equipamento extra.",
+        materiais: ["Cabo de fibra 10m", "Roteador Wi-Fi", "Splitter óptico"]
+      };
+      
+      setWorkOrderData(data);
+      setSearchResult(mockResult);
+      setProgress(100); // Garantir que a barra esteja completa
+      
+    } catch (err) {
+      clearInterval(interval);
+      setProgressInterval(null);
+      setError("Erro de conexão. Tente novamente.");
+      setProgress(100); // Completar a barra mesmo em caso de erro
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
   const handleCopyToClipboard = (text, field) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        setCopiedField(field);
-        setTimeout(() => setCopiedField(''), 2000);
-      })
-      .catch(err => console.error('Erro ao copiar: ', err));
-  };
-
-  const handleShare = () => {
-    if (!searchResult) return;
-    const shareText = `
-      WO: ${searchResult.numero}
-      Acesso: ${searchResult.acesso}
-      Nº de Box: ${searchResult.numBox}
-      Tipo de Box: ${searchResult.tipoBox}
-      Morada: ${searchResult.morada}
-      Fibra: ${searchResult.corFibra}
-      Data: ${searchResult.dataAgendamento}
-      Horário: ${searchResult.horario}
-      ${searchResult.slid ? `SLID: ${searchResult.slid}` : ''}
-    `;
-    if (navigator.share) {
-      navigator.share({
-        title: `WO ${searchResult.numero}`,
-        text: shareText,
-      }).catch(err => console.error('Erro ao compartilhar: ', err));
-    } else {
-      handleCopyToClipboard(shareText, 'compartilhamento');
-    }
-  };
-
-  const carregarWOHistorico = (numero) => {
-    setSearchTerm(numero);
-    const cachedWO = obterWOCache(numero);
-    if (cachedWO) {
-      setSearchResult(cachedWO);
-    } else {
-      handleSearch();
-    }
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 2000);
   };
 
   const abrirMapa = () => {
-    if (!searchResult) return;
-    
-    const { lat, lng } = searchResult.coordenadas;
-    // Usar a API de geolocalização do navegador para abrir o app de mapas padrão do dispositivo
-    window.open(`geo:${lat},${lng}?q=${lat},${lng}`, '_system');
-    
-    // Fallback para navegadores desktop ou que não suportam o protocolo geo:
-    if (!navigator.userAgent.match(/Android|iPhone|iPad|iPod/i)) {
-      window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+    if (searchResult?.morada) {
+      const endereco = encodeURIComponent(searchResult.morada);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${endereco}`, "_blank");
     }
+  };
+
+  const determinarCorFibra = (cor) => {
+    const cores = {
+      "Azul": { hex: "#1E90FF" },
+      "Verde": { hex: "#32CD32" },
+      "Vermelho": { hex: "#FF4500" },
+      "Amarelo": { hex: "#FFD700" },
+      "Branco": { hex: "#F8F8FF" },
+      "Preto": { hex: "#2F4F4F" },
+      "Laranja": { hex: "#FF8C00" },
+      "Roxo": { hex: "#9370DB" },
+      "Rosa": { hex: "#FF69B4" },
+      "Marrom": { hex: "#8B4513" },
+    };
+    
+    return cores[cor] || null;
   };
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-[#333] mb-4">Alocação de Work Order</h1>
+      <h1 className="text-xl font-semibold text-[#333] mb-4">Alocar WO</h1>
+      
       {/* Formulário de busca */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1">
-            <label htmlFor="wo-search" className="block text-sm text-[#555] mb-2">
-              Número da Work Order
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="workOrderNumber" className="block text-sm text-[#555] mb-1">
+              Número da WO
             </label>
-            <input
-              id="wo-search"
-              type="text"
-              placeholder="Ex: 12345678"
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-3 pr-10 text-[#333]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-            />
-          </div>
-          <div className="md:self-end">
-            <button
-              className="w-full md:w-auto bg-[#7C3AED] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#6B21A8] transition flex items-center justify-center gap-2"
-              onClick={handleSearch}
-              disabled={isSearching}
-            >
-              {isSearching ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Buscando...</span>
-                </>
-              ) : (
-                <>
-                  <Search size={18} />
-                  <span>Buscar</span>
-                </>
-              )}
-            </button>
-            <p className="text-xs text-[#777] mt-1 text-center md:text-left">Esse processo costuma levar 1 minuto</p>
-          </div>
-        </div>
-        
-        {/* Barra de progresso */}
-        {isSearching && (
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
-              <div 
-                className="bg-[#7C3AED] h-2.5 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              ></div>
+            <div className="relative">
+              <input
+                id="workOrderNumber"
+                type="text"
+                value={workOrderNumber}
+                onChange={handleChange}
+                placeholder="Ex: 12345678"
+                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                disabled={isLoading}
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#999]" size={18} />
             </div>
-            <p className="text-xs text-[#777] text-right">{Math.round(progress)}%</p>
           </div>
-        )}
+          
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`w-full bg-[#7C3AED] text-white py-3 rounded-xl font-semibold hover:bg-[#6B21A8] transition flex items-center justify-center gap-2 ${
+              isLoading ? "opacity-70 cursor-not-allowed" : ""
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <Loader size={18} className="animate-spin" />
+                <span>Alocando...</span>
+              </>
+            ) : (
+              "Alocar WO"
+            )}
+          </button>
+          
+          {/* Barra de progresso */}
+          {isLoading || progress > 0 ? (
+            <div className="mt-4">
+              <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[#7C3AED] transition-all duration-500 ease-linear"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-[#777] mt-1 text-center">
+                {progress < 100 ? "Processando solicitação..." : "Processamento concluído"}
+              </p>
+            </div>
+          ) : null}
+        </form>
       </div>
       
-      {/* Histórico de WOs */}
-      {historicoWOs.length > 0 && !searchResult && (
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-[#333] mb-3">Histórico de WOs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {historicoWOs.slice(0, 6).map((wo) => (
-              <div 
-                key={wo.numero}
-                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                onClick={() => carregarWOHistorico(wo.numero)}
-              >
-                <p className="font-medium text-[#7C3AED]">WO {wo.numero}</p>
-                <p className="text-sm text-[#555] truncate">{wo.morada}</p>
-                <p className="text-xs text-[#777] mt-1">
-                  {new Date(wo.timestamp).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
+      {/* Mensagem de erro */}
+      {error && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
+          <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+          <div>
+            <h3 className="font-medium text-red-700">Erro na alocação</h3>
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         </div>
       )}
       
-      {/* Resultado da busca */}
+      {/* Resultados da busca */}
       {searchResult && (
-        <div className={`bg-white rounded-xl shadow overflow-hidden relative ${showCompletionEffect ? 'animate-pulse' : ''}`}>
-          {/* Efeito de conclusão */}
-          {showCompletionEffect && (
-            <div className="absolute inset-0 bg-purple-100 opacity-30 animate-ping rounded-xl"></div>
-          )}
-          
-          {/* Cabeçalho */}
-          <div className="bg-[#7C3AED] p-4 text-white flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-semibold">WO {searchResult.numero}</h2>
-              <p className="text-sm text-purple-200">{searchResult.observacoes}</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="p-2 rounded-full hover:bg-purple-700 transition"
-                onClick={handleShare}
-                title="Compartilhar"
-              >
-                <Share2 size={20} />
-              </button>
-            </div>
-          </div>
-          {/* Conteúdo */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Coluna 1 */}
-              <div>
-                {/* SLID */}
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">SLID</h3>
-                  <div className="flex items-start gap-2">
-                    <p className="text-[#333] font-medium flex-1">{searchResult.slid || "CAKIBALE"}</p>
-                    <button
-                      className={`text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
-                      onClick={() => handleCopyToClipboard(searchResult.slid || "CAKIBALE", 'slid')}
-                      title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
-                    >
-                      <Clipboard size={16} />
-                    </button>
-                  </div>
+        <div className="grid grid-cols-1 gap-4 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <div className={`p-4 ${
+              searchResult.status === 'concluído' 
+                ? 'bg-emerald-50 border-b border-emerald-100' 
+                : searchResult.status === 'erro'
+                  ? 'bg-red-50 border-b border-red-100'
+                  : 'bg-yellow-50 border-b border-yellow-100'
+            }`}>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  {searchResult.status === 'concluído' ? (
+                    <CheckCircle size={20} className="text-emerald-500" />
+                  ) : searchResult.status === 'erro' ? (
+                    <AlertCircle size={20} className="text-red-500" />
+                  ) : (
+                    <Clock size={20} className="text-yellow-500" />
+                  )}
+                  <h3 className="font-medium">WO #{searchResult.wo}</h3>
                 </div>
-                
-                {/* Fibra */}
-                <div className="mb-6">
-                  <h3 className="text-sm text-[#777] mb-1">Fibra</h3>
-                  <div className="flex items-center gap-2">
-                    {determinarCorFibra(searchResult.corFibra) && (
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: determinarCorFibra(searchResult.corFibra).hex }}
-                      ></div>
-                    )}
-                    <p className="text-[#333]">{searchResult.corFibra}</p>
-                  </div>
-                </div>
-                
-                {/* Morada */}
-                <div className="mb-2">
-                  <h3 className="text-sm text-[#777] mb-1">Morada</h3>
-                  <div className="flex items-start gap-2">
-                    <p className="text-[#333] flex-1">{searchResult.morada}</p>
-                    <button
-                      className={`text-[#7C3AED] p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
-                      onClick={() => handleCopyToClipboard(searchResult.morada, 'morada')}
-                      title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
-                    >
-                      <Clipboard size={16} />
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Botão de mapa logo abaixo da morada */}
-                <div className="mb-6">
-                  <button
-                    className="flex items-center gap-2 text-[#7C3AED] hover:underline mt-2"
-                    onClick={abrirMapa}
-                  >
-                    <MapPin size={18} />
-                    <span>Ver no mapa</span>
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-                
-                {/* Acesso */}
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Acesso</h3>
-                  <p className="text-[#333] font-medium">{searchResult.acesso}</p>
-                </div>
-                
-                {/* Nº de Box */}
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Nº de Box</h3>
-                  <p className="text-[#333] font-medium">{searchResult.numBox}</p>
-                </div>
-              </div>
-              
-              {/* Coluna 2 */}
-              <div>
-                {/* Tipo de Box */}
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Tipo de Box</h3>
-                  <p className="text-[#333] font-medium">{searchResult.tipoBox}</p>
-                </div>
-                
-                {/* Instalar Telefone? */}
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Instalar Telefone?</h3>
-                  <p className="text-[#333] font-medium">{searchResult.telefone}</p>
-                </div>
-                
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Data de Agendamento</h3>
-                  <p className="text-[#333]">{searchResult.dataAgendamento}</p>
-                </div>
-                
-                <div className="mb-4">
-                  <h3 className="text-sm text-[#777] mb-1">Horário</h3>
-                  <p className="text-[#333]">{searchResult.horario}</p>
-                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  searchResult.status === 'concluído' 
+                    ? 'bg-emerald-100 text-emerald-700' 
+                    : searchResult.status === 'erro'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {searchResult.status === 'concluído' 
+                    ? 'Concluído' 
+                    : searchResult.status === 'erro'
+                      ? 'Erro'
+                      : 'Pendente'}
+                </span>
               </div>
             </div>
             
-            {/* Botões de ação - Apenas Nova Busca */}
-            <div className="mt-6 flex justify-center">
-              <button
-                className="w-full md:w-1/2 border border-gray-200 py-2 rounded-lg text-[#555] hover:bg-gray-50 transition"
-                onClick={() => setSearchResult(null)}
-              >
-                Nova Busca
-              </button>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Coluna 1 */}
+                <div>
+                  {/* SLID */}
+                  <div className="mb-6">
+                    <h3 className="text-xs text-muted mb-1">SLID</h3>
+                    <div className="flex items-start gap-2">
+                      <p className="text-text font-medium flex-1">{searchResult.slid || "CAKIBALE"}</p>
+                      <button
+                        className={`text-primary p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
+                        onClick={() => handleCopyToClipboard(searchResult.slid || "CAKIBALE", 'slid')}
+                        title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
+                      >
+                        <Clipboard size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Fibra */}
+                  <div className="mb-6">
+                    <h3 className="text-xs text-muted mb-1">Fibra</h3>
+                    <div className="flex items-center gap-2">
+                      {determinarCorFibra(searchResult.corFibra) && (
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: determinarCorFibra(searchResult.corFibra).hex }}
+                        ></div>
+                      )}
+                      <p className="text-text">{searchResult.corFibra}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Morada */}
+                  <div className="mb-2">
+                    <h3 className="text-xs text-muted mb-1">Morada</h3>
+                    <div className="flex items-start gap-2">
+                      <p className="text-text flex-1">{searchResult.morada}</p>
+                      <button
+                        className={`text-primary p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
+                        onClick={() => handleCopyToClipboard(searchResult.morada, 'morada')}
+                        title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
+                      >
+                        <Clipboard size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Botão de mapa logo abaixo da morada */}
+                  <div className="mb-6">
+                    <button
+                      className="flex items-center gap-2 text-primary hover:underline mt-2"
+                      onClick={abrirMapa}
+                    >
+                      <MapPin size={18} />
+                      <span>Ver no mapa</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                  
+                  {/* Acesso */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Acesso</h3>
+                    <p className="text-text font-medium">{searchResult.acesso}</p>
+                  </div>
+                  
+                  {/* Nº de Box */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Nº de Box</h3>
+                    <p className="text-text font-medium">{searchResult.numBox}</p>
+                  </div>
+                </div>
+                
+                {/* Coluna 2 */}
+                <div>
+                  {/* Tipo de Box */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Tipo de Box</h3>
+                    <p className="text-text font-medium">{searchResult.tipoBox}</p>
+                  </div>
+                  
+                  {/* Instalar Telefone? */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Instalar Telefone?</h3>
+                    <p className="text-text font-medium">{searchResult.telefone}</p>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Data de Agendamento</h3>
+                    <p className="text-text">{searchResult.dataAgendamento}</p>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Horário</h3>
+                    <p className="text-text">{searchResult.horario}</p>
+                  </div>
+                  
+                  {/* Observações */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-muted mb-1">Observações</h3>
+                    <p className="text-text text-sm">{searchResult.observacoes}</p>
+                  </div>
+                  
+                  {/* Materiais */}
+                  {searchResult.materiais && searchResult.materiais.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="text-xs text-muted mb-1">Materiais Necessários</h3>
+                      <ul className="space-y-1">
+                        {searchResult.materiais.map((material, index) => (
+                          <li key={index} className="text-sm text-text flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                            {material}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Botões de ação - Apenas Nova Busca */}
+              <div className="mt-6 flex justify-center">
+                <button
+                  className="w-full md:w-1/2 bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition"
+                  onClick={() => setSearchResult(null)}
+                >
+                  Nova Busca
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+      
+      {/* Estilos adicionais para animações */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

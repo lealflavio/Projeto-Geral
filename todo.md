@@ -1,17 +1,13 @@
-# Reformulação da Página Simulador para Estimativa de Ganhos
+# Transformação da Página Alocar WO
 
 ## Tarefas
 
-- [x] Criar novo branch feature/estimativa-ganhos
-- [x] Atualizar referências na Sidebar (renomear "Simulador" para "Estimativa de Ganhos")
-- [x] Reformular a página Simulador.jsx para EstimativaGanhos.jsx
-- [x] Implementar área de configuração para valores personalizados por tipo de serviço
-- [x] Implementar persistência dos valores configurados com localStorage
-- [x] Implementar filtro de intervalo de datas (padrão: mês atual)
-- [x] Implementar lista de WOs processadas com detalhes
-- [x] Implementar modal para visualização detalhada de cada WO
-- [x] Implementar cálculo e exibição do total geral estimado
-- [x] Garantir design responsivo e moderno seguindo o padrão do dashboard
-- [x] Atualizar todas as referências ao nome antigo em outros arquivos
-- [ ] Validar todas as funcionalidades implementadas
+- [x] Criar novo branch feature/alocar-wo-redesign
+- [x] Analisar layout e lógica atual da página Alocar WO
+- [x] Analisar layout visual da página Minhas WOs
+- [x] Implementar novo layout visual seguindo o padrão de Minhas WOs
+- [x] Implementar barra de progresso funcional (60 segundos)
+- [x] Garantir que o botão de alocar fique desabilitado durante o carregamento
+- [x] Manter todos os estados de erro/sucesso e lógica existente
+- [ ] Validar funcionalidades sem alterar a lógica principal
 - [ ] Criar pull request para a branch master
