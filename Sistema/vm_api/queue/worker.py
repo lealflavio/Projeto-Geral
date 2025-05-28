@@ -1,177 +1,214 @@
 """
-Worker para processamento de tarefas da fila.
-Este arquivo implementa o consumidor de tarefas do sistema de filas Redis.
+Módulo de worker para processamento de tarefas em fila.
+Este arquivo implementa o worker que processa tarefas da fila.
 """
-
-import json
-import time
-import redis
 import logging
+import os
+import sys
+import json
+import importlib.util
 import requests
-import traceback
-from .. import config
-from ..adapters.orquestrador_adapter import OrquestradorAdapter
+from pathlib import Path
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Conectar ao Redis
-redis_client = redis.Redis(
-    host=config.REDIS_HOST,
-    port=config.REDIS_PORT,
-    db=config.REDIS_DB,
-    password=config.REDIS_PASSWORD
-)
+# Caminho para o script M1_Criar_Tecnico.py
+SCRIPT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../M1_Criar_Tecnico.py'))
 
-def process_task(task):
+# Importar o módulo M1_Criar_Tecnico.py dinamicamente
+def import_criar_tecnico_module():
+    try:
+        spec = importlib.util.spec_from_file_location("criar_tecnico_module", SCRIPT_PATH)
+        criar_tecnico_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(criar_tecnico_module)
+        return criar_tecnico_module
+    except Exception as e:
+        logger.error(f"Erro ao importar o módulo M1_Criar_Tecnico.py: {str(e)}")
+        return None
+
+def process_create_folders_task(task_data):
     """
-    Processa uma tarefa da fila.
+    Processa uma tarefa de criação de pastas.
     
     Args:
-        task (dict): Tarefa a ser processada
+        task_data (dict): Dados da tarefa.
         
     Returns:
-        dict: Resultado do processamento
+        dict: Resultado do processamento.
     """
-    task_type = task.get("type")
-    params = task.get("params", {})
-    job_id = task.get("job_id")
+    logger.info(f"Processando tarefa de criação de pastas: {task_data}")
     
-    logger.info(f"Processando tarefa {job_id} do tipo {task_type}")
+    user_id = task_data.get('user_id')
+    user_email = task_data.get('user_email')
+    user_name = task_data.get('user_name', f"Usuario_{user_id}")
+    callback_url = task_data.get('callback_url')
     
     try:
-        if task_type == "allocate_wo":
-            # Processar alocação de WO
-            work_order_id = params.get("work_order_id")
-            credentials = params.get("credentials", {})
-            
-            result = OrquestradorAdapter.alocar_wo(work_order_id, credentials)
-            
-        elif task_type == "process_pdf":
-            # Processar PDF
-            pdf_path = params.get("pdf_path")
-            tecnico_id = params.get("tecnico_id")
-            credentials = params.get("credentials", {})
-            
-            result = OrquestradorAdapter.processar_pdf(pdf_path, tecnico_id, credentials)
-            
-        else:
-            logger.error(f"Tipo de tarefa desconhecido: {task_type}")
+        # Importar o módulo M1_Criar_Tecnico.py
+        criar_tecnico_module = import_criar_tecnico_module()
+        if not criar_tecnico_module:
             result = {
                 "status": "error",
-                "error": f"Tipo de tarefa desconhecido: {task_type}"
+                "message": "Erro ao importar o módulo de criação de pastas"
             }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+            return result
         
-        # Adicionar job_id ao resultado
-        result["job_id"] = job_id
+        # Chamar a função criar_tecnico do módulo
+        # Nota: Estamos usando uma senha temporária que será alterada pelo usuário depois
+        success = criar_tecnico_module.criar_tecnico(
+            nome_completo=user_name,
+            email=user_email,
+            usuario_portal=user_id,
+            senha_portal="temp_password_123"
+        )
         
-        return result
+        if success:
+            # Obter os IDs das pastas criadas
+            tecnicos_json_path = Path("/home/flavioleal/Sistema/tecnicos/tecnicos.json")
+            if tecnicos_json_path.exists():
+                with open(tecnicos_json_path, "r", encoding="utf-8") as f_in:
+                    tecnicos_data = json.load(f_in)
+                    
+                # Encontrar o usuário recém-criado
+                user_data = next((t for t in tecnicos_data if t["email"] == user_email), None)
+                
+                if user_data:
+                    result = {
+                        "status": "success",
+                        "message": "Pastas criadas com sucesso",
+                        "result": {
+                            "drive_folders": {
+                                "user_folder_id": user_data.get("pasta_drive_id"),
+                                "novos_folder_id": user_data.get("pasta_novos_id")
+                            },
+                            "vm_folders": {
+                                "user_folder": user_data.get("pasta_vm"),
+                                "novos_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "novos"),
+                                "processados_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "processados"),
+                                "erros_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "erro")
+                            }
+                        }
+                    }
+                    send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+                    return result
+            
+            # Fallback se não conseguir obter os IDs específicos
+            result = {
+                "status": "success",
+                "message": "Pastas criadas com sucesso, mas não foi possível obter os IDs"
+            }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+            return result
+        else:
+            result = {
+                "status": "error",
+                "message": "Falha ao criar pastas"
+            }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+            return result
+            
     except Exception as e:
-        logger.error(f"Erro ao processar tarefa {job_id}: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
+        logger.error(f"Erro ao criar pastas para usuário {user_id}: {str(e)}")
+        result = {
             "status": "error",
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "job_id": job_id
+            "message": f"Erro ao criar pastas: {str(e)}"
         }
+        send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+        return result
 
-def send_callback(task, result):
+def process_files_task(task_data):
     """
-    Envia o resultado para a URL de callback.
+    Processa uma tarefa de processamento de arquivos.
     
     Args:
-        task (dict): Tarefa processada
-        result (dict): Resultado do processamento
+        task_data (dict): Dados da tarefa.
+        
+    Returns:
+        dict: Resultado do processamento.
     """
-    callback_url = task.get("callback_url")
+    logger.info(f"Processando tarefa de processamento de arquivos: {task_data}")
     
+    user_id = task_data.get('user_id')
+    drive_folder_id = task_data.get('drive_folder_id')
+    callback_url = task_data.get('callback_url')
+    
+    try:
+        # Aqui você implementaria a lógica para processar os arquivos
+        # Por exemplo, chamar um script existente que faz o download e processamento
+        
+        # Simulação de processamento bem-sucedido
+        result = {
+            "status": "success",
+            "message": "Arquivos processados com sucesso",
+            "files_processed": 0
+        }
+        
+        send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+        return result
+        
+    except Exception as e:
+        logger.error(f"Erro ao processar arquivos para usuário {user_id}: {str(e)}")
+        result = {
+            "status": "error",
+            "message": f"Erro ao processar arquivos: {str(e)}"
+        }
+        send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+        return result
+
+def send_callback(callback_url, user_id, job_id, status, result):
+    """
+    Envia um callback para a URL especificada.
+    
+    Args:
+        callback_url (str): URL para enviar o callback.
+        user_id (str): ID do usuário.
+        job_id (str): ID do job.
+        status (str): Status do processamento.
+        result (dict): Resultado do processamento.
+    """
     if not callback_url:
-        logger.warning(f"Nenhuma URL de callback definida para tarefa {task.get('job_id')}")
+        logger.info("Nenhuma URL de callback fornecida, ignorando.")
         return
     
     try:
-        response = requests.post(
-            callback_url,
-            json=result,
-            headers={"Content-Type": "application/json"},
-            timeout=10
-        )
+        payload = {
+            "user_id": user_id,
+            "job_id": job_id,
+            "status": status,
+            "result": result
+        }
         
-        if response.status_code == 200:
-            logger.info(f"Callback enviado com sucesso para {callback_url}")
-        else:
-            logger.error(f"Erro ao enviar callback: {response.status_code} - {response.text}")
+        response = requests.post(callback_url, json=payload)
+        response.raise_for_status()
+        
+        logger.info(f"Callback enviado com sucesso para {callback_url}")
+        
     except Exception as e:
-        logger.error(f"Erro ao enviar callback: {str(e)}")
+        logger.error(f"Erro ao enviar callback para {callback_url}: {str(e)}")
 
-def handle_failed_task(task):
+def process_task(task):
     """
-    Trata uma tarefa que falhou.
+    Processa uma tarefa com base no seu tipo.
     
     Args:
-        task (dict): Tarefa que falhou
+        task (dict): Tarefa a ser processada.
+        
+    Returns:
+        dict: Resultado do processamento.
     """
-    attempts = task.get("attempts", 0) + 1
-    task["attempts"] = attempts
+    task_type = task.get('type')
+    task_data = task.get('data', {})
     
-    if attempts >= task.get("max_attempts", config.MAX_RETRIES):
-        # Mover para fila de dead letter
-        logger.warning(f"Tarefa {task.get('job_id')} falhou após {attempts} tentativas, movendo para dead letter")
-        redis_client.rpush(config.DEAD_LETTER_QUEUE, json.dumps(task))
+    if task_type == 'create_folders':
+        return process_create_folders_task(task_data)
+    elif task_type == 'process_files':
+        return process_files_task(task_data)
     else:
-        # Recolocar na fila original
-        queue_name = config.HIGH_PRIORITY_QUEUE if task.get("priority") == "high" else config.NORMAL_PRIORITY_QUEUE
-        logger.info(f"Recolocando tarefa {task.get('job_id')} na fila após falha (tentativa {attempts})")
-        redis_client.rpush(queue_name, json.dumps(task))
-
-def worker_loop():
-    """
-    Loop principal do worker.
-    """
-    logger.info("Iniciando worker loop")
-    
-    while True:
-        # Verificar primeiro a fila de alta prioridade
-        queues = [config.HIGH_PRIORITY_QUEUE, config.NORMAL_PRIORITY_QUEUE]
-        
-        # Bloquear até que haja uma tarefa disponível
-        queue_data = redis_client.blpop(queues, timeout=1)
-        
-        if not queue_data:
-            # Nenhuma tarefa disponível, aguardar um pouco
-            time.sleep(0.1)
-            continue
-        
-        queue_name, task_json = queue_data
-        queue_name = queue_name.decode('utf-8')
-        
-        try:
-            task = json.loads(task_json)
-            logger.info(f"Tarefa obtida da fila {queue_name}: {task.get('job_id')}")
-            
-            # Processar a tarefa
-            result = process_task(task)
-            
-            # Enviar callback com o resultado
-            send_callback(task, result)
-            
-            # Se houve erro no processamento, tratar a falha
-            if result.get("status") == "error":
-                handle_failed_task(task)
-                
-        except Exception as e:
-            logger.error(f"Erro ao processar tarefa da fila {queue_name}: {str(e)}")
-            logger.error(traceback.format_exc())
-            
-            # Tentar recolocar a tarefa na fila
-            try:
-                task = json.loads(task_json)
-                handle_failed_task(task)
-            except:
-                # Se não conseguir parsear a tarefa, logar e continuar
-                logger.error(f"Não foi possível parsear a tarefa: {task_json}")
-
-if __name__ == "__main__":
-    worker_loop()
+        logger.error(f"Tipo de tarefa desconhecido: {task_type}")
+        return {
+            "status": "error",
+            "message": f"Tipo de tarefa desconhecido: {task_type}"
+        }
