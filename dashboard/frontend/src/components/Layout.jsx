@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 const getPageTitle = (pathname) => {
   switch (pathname) {
     case "/dashboard":
-      return "Início";
+      return "Dashboard";
     case "/creditos":
       return "Créditos";
     case "/simulador":
@@ -18,6 +18,8 @@ const getPageTitle = (pathname) => {
       return "Alocar WO";
     case "/mapa-kms":
       return "Mapa de KMs";
+    case "/estimativa-ganhos":
+      return "Estimativa de Ganhos";
     default:
       return "";
   }
@@ -60,9 +62,14 @@ const Layout = () => {
           }`}
           style={{ position: 'sticky', top: 0 }}
         >
-          <div className="flex items-center justify-center w-full">
-            <h1 className="text-xl font-semibold text-text mx-auto">{pageTitle}</h1>
+          <div className="flex items-center w-full gap-4">
+            {/* Espaço reservado para o botão de menu que já está no Sidebar */}
+            <button className="md:hidden">
+              {/* Aqui poderia ir um ícone se quiser mover o botão para cá */}
+            </button>
+            <h1 className="text-xl font-semibold text-text">{pageTitle}</h1>
           </div>
+
         </div>
 
         {/* Conteúdo da página - Sem margem adicional pois a topbar não é mais fixa */}
