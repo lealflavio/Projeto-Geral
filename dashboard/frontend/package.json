@@ -18,7 +18,8 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.3",
-    "shadcn-ui": "^0.9.5"
+    "shadcn-ui": "^0.9.5",
+    "react-leaflet": "^3.2.0"  // Pacote react-leaflet adicionado
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
