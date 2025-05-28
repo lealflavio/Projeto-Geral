@@ -15,17 +15,23 @@
     "framer-motion": "^12.15.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.510.0",
+    // fix-react-leaflet-dependency
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
+=======
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    // master
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.3",
-    "shadcn-ui": "^0.9.5"
+    "shadcn-ui": "^0.9.5",
+    "react-leaflet": "^3.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.0",

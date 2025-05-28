@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "rosy-valor-418100",
+  "private_key_id": "f612c08d654773904ceeedd47057982be2f9878b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUVEHkBrjfNL7z\nQAZCnajMYstfCkWRfowb9yJm9aD70mRO4i3aVELpq//GbL/0WBABqb7DMFxZ6aLn\nEGYYXQ1uyKZ6d5A9vED1jp0oVylY+iY0dojgq4qLdFliej2jY2pyPCjiIRxkIzut\nDp229FIt7KWXG3aUuXEc3Qd375OZ4849GnxqT2wi5YdR0J4vjHmr5gvszhKnks2b\nm9MGc7xOI+NlHQcDpCz3ikyZCvtzlgyXe899zNrEjfKMF6OUDbNoo4LqI6FR0KZn\nNOQpMMdVf3E4ktoysHrExOMfWYy7AFhG8n9n4g4Td+b3yHq2TThgfqpwFaQiuV2y\nQr4KjKLVAgMBAAECggEAAr6AB4FqvD/DRAOM0SmWd+XC+Rx537KB/w6HnEsKZJbI\ngxh7PTofj0OQz7CyHmdQ9aSK+ZzTZLoXR+M3XpM9TDQ9qpGHBLU9Ja9NKqtNtn+t\nJLpvdG/jH4BGc3Ze+5CaXJWYdau14TlvWQI6WZX4xe0sCrLpKmznIFde9FbdUnzQ\nL6sLau5nx5Ut4iTHWJAUHwOWFwKCYa66RvJzW2V928u24MWTXnSN3XcNx9f5Ps6+\nmxfxha/Li6TaYKaZfMaJP6kzC2qbmlumaCoEJwk307mqJLb+wLPJUp8yOglNuc1K\nFgLEkqOgm/XSnjzyE7ffbAQenTR9GRNoYs6rPGgd9QKBgQD60LmZ7Eb6vpJer+P6\ndjP4LNcEJIlCvoTQTE1x3nn6JOyGvvWXzRm32B6X2jDyQrcFt3MisuEveT0SGA+M\nhnnGkmXvnVqnYxuCy+dwTj+44cNJJEAgTwaPlZ29SdMT8UnnKL8AZHszS8fT5BpZ\nIPxUOr2PskIzRZEbNS6ei39v1wKBgQDYt96XixU5ewFphGgb6eDpvgODhZgc7KYH\nrzMV8Z4aBuO9OE15et79IFoaByl/vIK3vIFi2tf0AIqZRhj5UeCwBsQpoYSp2Sv9\n4eZKvAA1wsYrl3RvoQHdKFjC7iYgzaMh1up6qKsWJPNMyXXRlyUGCEXmqFXrGg67\nUiS7u7IdMwKBgQDvQPQLdGww/GE7maVrYh4o+v0Qopmc5Yhj+qVVndfVWiuWTcqQ\nx8FksfBdAnH2ZtWXyms2ClTsqEYtYG5UqmK3nSdH715ulgfEOSXI55u5jQJwXvgc\n2cV0alBSJH4JY/4PV7r7cN5lDEDOS6UmqGSLJI126aBksFO/FHgoHQGveQKBgA//\nktkRFWIG6JXHhn/5Bfd7ZXsCE7ae6arLjjPigE9fjtRbIa0EGw4Io14khTW+zs+N\nhOetTB/hIloqSJGvL60O8tA38jkvpQW69Wsy8bkGRebV6WyMMD0JS3QobHwjchV/\nbhPb+7VIyQU0IhR02fDWD4L1jlIqvEeryrZpJr7tAoGBAKWzkcvd+GS4z5pdueO0\nQITqfNihCxE71rBnAupmhg/f2IKbGghTxTYQwtKM7iVWJIakLXjQJJkUVo5p8OCg\n74ACAAmxihR1ysrxKS/l7X9k8qo/RAlRRLOCs4ISZnSN7Fx86dwjihWQf1GX1jpD\naN4CXB6sp1MtgeuSaHhrfgGf\n-----END PRIVATE KEY-----\n",
+  "client_email": "sistem-project@rosy-valor-418100.iam.gserviceaccount.com",
+  "client_id": "116257070678105698132",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sistem-project%40rosy-valor-418100.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
