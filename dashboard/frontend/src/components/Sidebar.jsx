@@ -21,7 +21,7 @@ const Sidebar = () => {
     { name: "Início", icon: <Home size={20} />, path: "/dashboard" },
     { name: "Créditos", icon: <DollarSign size={20} />, path: "/creditos" },
     { name: "Alocar WO", icon: <List size={20} />, path: "/alocar-wo" },
-    { name: "Simulador", icon: <BarChart size={20} />, path: "/simulador" },    
+    { name: "Estimativa de Ganhos", icon: <BarChart size={20} />, path: "/estimativa-ganhos" },    
     { name: "Minhas WOs", icon: <List size={20} />, path: "/wos" },
     { name: "Mapa de KMs", icon: <Navigation size={20} />, path: "/mapa-kms" },
     { name: "Perfil", icon: <User size={20} />, path: "/perfil" },
