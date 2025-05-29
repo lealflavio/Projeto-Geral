@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -7,13 +6,11 @@ import {
   BarChart,
   List,
   User,
-  Menu,
   X,
   Navigation,
 } from "lucide-react";
 
-const Sidebar = () => {
-  const [open, setOpen] = useState(false);
+const Sidebar = ({ open, setOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -34,16 +31,6 @@ const Sidebar = () => {
   
   return (
     <>
-      {/* Botão mobile de abrir menu - Agora apenas com ícone hambúrguer tradicional */}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button 
-          onClick={() => setOpen(true)}
-          className="text-text"
-        >
-          <Menu size={28} />
-        </button>
-      </div>
-      
       {/* Overlay ao abrir menu mobile */}
       {open && (
         <div
