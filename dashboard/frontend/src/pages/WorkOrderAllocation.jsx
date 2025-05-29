@@ -4,6 +4,8 @@ import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle,
 import CardInfo from "../components/CardInfo";
 import { toast } from "react-toastify";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://zincoapp.pt"; // Adicionado o domínio base
+
 const WorkOrderAllocation = () => {
   const [workOrderNumber, setWorkOrderNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,15 +58,20 @@ const WorkOrderAllocation = () => {
     setProgressInterval(interval);
     
     try {
-      const response = await fetch(`/api/wondercom/allocate`, {
+      // Corrigido o endpoint para incluir o domínio base
+      const response = await fetch(`${API_BASE_URL}/api/wondercom/allocate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
+        // Corrigida a estrutura do corpo da requisição para corresponder ao esperado pela API
         body: JSON.stringify({
-          workOrderNumber,
-          technicianId: user?.id,
+          work_order_id: workOrderNumber,
+          credentials: {
+            username: user?.usuario_portal,
+            password: user?.senha_portal
+          }
         }),
       });
       
