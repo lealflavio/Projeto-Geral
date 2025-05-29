@@ -27,7 +27,7 @@ def enqueue_task(task_type, params, priority="normal", callback_url=None):
     Adiciona uma tarefa à fila.
     
     Args:
-        task_type (str): Tipo da tarefa ('create_folders', 'process_files', etc.)
+        task_type (str): Tipo da tarefa ('allocate_wo' ou 'process_pdf')
         params (dict): Parâmetros da tarefa
         priority (str): Prioridade da tarefa ('high' ou 'normal')
         callback_url (str, opcional): URL para callback após conclusão
@@ -45,7 +45,7 @@ def enqueue_task(task_type, params, priority="normal", callback_url=None):
     task = {
         "job_id": job_id,
         "type": task_type,
-        "data": params,  # Usar 'data' em vez de 'params' para consistência com os workers
+        "params": params,
         "priority": priority,
         "created_at": datetime.datetime.utcnow().isoformat(),
         "attempts": 0,
