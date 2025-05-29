@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useUser } from "../hooks/useUser";
 import { useAuthContext } from "../context/AuthContext";
 import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader } from "lucide-react";
 import CardInfo from "../components/CardInfo";
@@ -15,8 +14,7 @@ const WorkOrderAllocation = () => {
   const [progress, setProgress] = useState(0);
   const [progressInterval, setProgressInterval] = useState(null);
   
-  const { user } = useUser();
-  const { authToken } = useAuthContext();
+  const { authToken, user } = useAuthContext();
 
   // Limpar intervalo quando componente é desmontado
   useEffect(() => {
