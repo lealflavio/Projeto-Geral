@@ -1,13 +1,37 @@
-# Transformação da Página Alocar WO
+# Otimização do Script Selenium
 
 ## Tarefas
 
-- [x] Criar novo branch feature/alocar-wo-redesign
-- [x] Analisar layout e lógica atual da página Alocar WO
-- [x] Analisar layout visual da página Minhas WOs
-- [x] Implementar novo layout visual seguindo o padrão de Minhas WOs
-- [x] Implementar barra de progresso funcional (60 segundos)
-- [x] Garantir que o botão de alocar fique desabilitado durante o carregamento
-- [x] Manter todos os estados de erro/sucesso e lógica existente
-- [ ] Validar funcionalidades sem alterar a lógica principal
-- [ ] Criar pull request para a branch master
+- [x] Autenticar no GitHub usando token
+- [x] Criar novo branch para otimização (otimizacao-selenium-script)
+- [x] Analisar script instalar_api.sh e componentes
+- [x] Instalar dependências e preparar ambiente de teste
+  - [x] Instalar Selenium e dependências
+  - [x] Configurar ChromeDriver
+  - [x] Preparar ambiente para testes
+- [x] Executar testes de performance no script atual
+  - [x] Tentar medir tempo de execução atual (linha de base)
+  - [x] Identificar limitações do ambiente de teste
+- [x] Documentar limitações do ambiente de teste
+- [ ] Otimizar script e componentes para menor tempo
+  - [ ] Otimizar configurações do Selenium
+  - [ ] Melhorar estratégias de espera
+  - [ ] Otimizar seletores (com cuidado)
+  - [ ] Implementar paralelismo onde possível
+- [ ] Validar funcionamento com seletores e credenciais
+  - [ ] Testar com credenciais fornecidas (user: flavio.leal, senha: MFH8fQgAa4)
+  - [ ] Testar com WO: 16722483
+  - [ ] Garantir que os seletores continuem funcionando
+- [ ] Documentar resultados e preparar pull request
+  - [ ] Documentar melhorias implementadas
+  - [ ] Documentar ganhos de performance
+- [ ] Reportar resultados ao usuário e enviar pull request
+
+## Notas de Análise
+
+### Componentes Identificados
+- Script principal: wondercom_client.py
+- Utiliza Selenium para automação de navegador
+- Configurado para rodar em modo headless
+- Possui seletores sensíveis que precisam ser mantidos
+- Tempo atual de processamento: ~60 segundos
