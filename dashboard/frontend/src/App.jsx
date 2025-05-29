@@ -12,10 +12,12 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoutes";
 import EsqueciSenhaPage from "./pages/EsqueciSenhaPage";
 import SessionTimeoutHandler from "./components/SessionTimeoutHandler";
+import { AuthProvider } from "./context/AuthContext";
 
 function App() {
   return (
-    <Router>
+    <AuthProvider>
+      <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/cadastro" element={<CadastroPage />} />
@@ -38,6 +40,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
+    </AuthProvider>
   );
 }
 
