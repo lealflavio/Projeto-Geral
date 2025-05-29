@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Settings, Check, X, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Settings, Check, X, Eye, EyeOff, RefreshCw, ExternalLink, FolderOpen } from "lucide-react";
 
 const Toast = ({ show, message, buttonText, onButton }) => {
   if (!show) return null;
@@ -54,6 +54,9 @@ const Perfil = () => {
   const [usuarioPortal, setUsuarioPortal] = useState("");
   const [senhaPortal, setSenhaPortal] = useState("");
   const [mostrarSenhaPortal, setMostrarSenhaPortal] = useState(false);
+  
+  // Link da pasta no Drive
+  const [pastaLink, setPastaLink] = useState("");
 
   // Toast
   const [toast, setToast] = useState({ show: false, message: "", buttonText: "" });
@@ -71,6 +74,14 @@ const Perfil = () => {
         setUsuario(data);
         setNovoWhatsapp(data.whatsapp || "");
         setUsuarioPortal(data.usuario_portal || "");
+        
+        // Verificar se o usuário tem link da pasta
+        if (data.pasta_novos_link) {
+          setPastaLink(data.pasta_novos_link);
+        } else if (data.usuario_portal) {
+          // Se o usuário está integrado mas não tem o link, buscar o link
+          fetchPastaLink(data.usuario_portal);
+        }
       } catch (error) {
         setToast({
           show: true,
@@ -83,6 +94,30 @@ const Perfil = () => {
     };
     fetchUsuario();
   }, []);
+  
+  // Buscar link da pasta do usuário
+  const fetchPastaLink = async (userPortal) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const { data } = await axios.get(`${apiUrl}/folders/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { usuario_portal: userPortal }
+      });
+      
+      if (data.status === "success" && data.exists && data.user_data?.novos_folder_link) {
+        setPastaLink(data.user_data.novos_folder_link);
+        
+        // Atualizar o usuário local com o link da pasta
+        setUsuario(prev => ({
+          ...prev,
+          pasta_novos_link: data.user_data.novos_folder_link
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao buscar link da pasta:", error);
+    }
+  };
 
   // Salvar WhatsApp
   const handleSalvarWhatsapp = async () => {
@@ -157,12 +192,26 @@ const Perfil = () => {
     try {
       const token = localStorage.getItem("authToken");
       const apiUrl = import.meta.env.VITE_API_URL;
-      await axios.put(
+      const response = await axios.put(
         `${apiUrl}/usuarios/integrar`,
         { usuario_portal: usuarioPortal, senha_portal: senhaPortal },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setUsuario((u) => ({ ...u, integrado: true, usuario_portal: usuarioPortal }));
+      
+      // Verificar se a resposta contém o link da pasta
+      if (response.data && response.data.pasta_novos_link) {
+        setPastaLink(response.data.pasta_novos_link);
+      } else {
+        // Se não tiver o link, buscar após um tempo para dar tempo de criar as pastas
+        setTimeout(() => fetchPastaLink(usuarioPortal), 5000);
+      }
+      
+      setUsuario((u) => ({ 
+        ...u, 
+        integrado: true, 
+        usuario_portal: usuarioPortal,
+        pasta_novos_link: response.data?.pasta_novos_link || ""
+      }));
       setEditandoPortal(false);
       setSenhaPortal("");
       setToast({
@@ -176,6 +225,13 @@ const Perfil = () => {
         message: "Falha na integração.",
         buttonText: "Tentar novamente",
       });
+    }
+  };
+
+  // Abrir pasta no Drive
+  const abrirPastaDrive = () => {
+    if (pastaLink) {
+      window.open(pastaLink, '_blank');
     }
   };
 
@@ -589,6 +645,34 @@ const Perfil = () => {
                 </form>
               )}
             </div>
+            
+            {/* Pasta no Drive - NOVO */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <label className="block text-sm text-muted mb-2">Sua Pasta no Drive</label>
+              {pastaLink ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center">
+                    <FolderOpen size={20} className="text-primary mr-2" />
+                    <span className="text-sm text-text">Pasta para envio de arquivos</span>
+                  </div>
+                  <button
+                    onClick={abrirPastaDrive}
+                    className="flex items-center justify-center gap-2 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition w-full"
+                  >
+                    <ExternalLink size={18} />
+                    Abrir Pasta no Drive
+                  </button>
+                  <p className="text-xs text-muted mt-1 text-center">
+                    Envie seus arquivos para esta pasta para processamento automático
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                  <RefreshCw size={20} className="text-muted animate-spin" />
+                  <p className="text-sm text-muted">Buscando informações da sua pasta...</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <style>{`
@@ -597,6 +681,12 @@ const Perfil = () => {
             to { opacity: 1; transform: translateY(0);}
           }
           .animate-fade-in { animation: fade-in 0.3s cubic-bezier(.4,0,.2,1);}
+          
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .animate-spin { animation: spin 1.5s linear infinite; }
         `}</style>
       </div>
     </div>
