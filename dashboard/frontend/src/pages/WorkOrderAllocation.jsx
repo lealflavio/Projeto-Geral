@@ -340,7 +340,7 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
       
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
@@ -465,20 +465,20 @@ const WorkOrderAllocation = () => {
             linha1: "Rua das Flores, 123",
             linha2: "3000-050 Lisboa"
           },
-          acesso: "Portão principal",
-          numBox: "B-4578",
-          tipoBox: "Fibra Óptica",
+          acesso: "188067988",
+          numBox: "1",
+          tipoBox: "Smart",
           telefone: "Sim",
           dataAgendamento: "28/05/2025",
-          status: "pendente",
-          tipoInstalacao: "Fibra + TV",
+          status: "Alocado",
+          tipoInstalacao: "Instalacao FTTH",
           tecnico: user?.name || "Técnico",
           endereco: "Rua das Flores, 123\n3000-050 Lisboa",
           coordenadas: {
             lat: 38.7223,
             lng: -9.1393
           },
-          donaRede: "PDO123",
+          donaRede: "NOS",
           portoEntrada: "Porto 5",
           estadoIntervencao: "Em Progresso"
         };
