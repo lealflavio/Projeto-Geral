@@ -128,6 +128,27 @@ class WondercomClient:
             logger.error(f"Erro ao pesquisar WO: {e}")
             return None
 
+    def cor_para_hex(self, cor_texto):
+        """Converte nome de cor para código hexadecimal."""
+        mapeamento_cores = {
+            "AZUL": "#0000FF",
+            "VERMELHO": "#FF0000",
+            "VERDE": "#00FF00",
+            "AMARELO": "#FFFF00",
+            "BRANCO": "#FFFFFF",
+            "PRETO": "#000000",
+            "LARANJA": "#FFA500",
+            "VIOLETA": "#8A2BE2",
+            "MARROM": "#A52A2A",
+            "CINZA": "#808080"
+        }
+        
+        # Normaliza o texto da cor (maiúsculas e sem acentos)
+        cor_normalizada = cor_texto.upper().strip() if cor_texto else ""
+        
+        # Retorna o código hex correspondente ou um valor padrão
+        return mapeamento_cores.get(cor_normalizada, "#0000FF")
+
     def extract_work_order_details(self, work_order_id, estado_wo):
         """
         Extrai detalhes da ordem de trabalho da página de detalhes:
@@ -136,6 +157,10 @@ class WondercomClient:
         - SLID/Username (input)
         - Morada (input ou textarea)
         - Coordenadas (extraídas da descrição)
+        - Dona de Rede (input)
+        - Porto Primário do PDO(in) (input)
+        - Data Início Agendamento (input)
+        - Estado da Intervenção (input)
         """
         try:
             dados_wo = {
@@ -145,7 +170,11 @@ class WondercomClient:
                 "fibra": "",
                 "slid": "",
                 "morada": "",
-                "coordenadas": None
+                "coordenadas": None,
+                "dona_rede": "",         # Novo campo: PDO (Dona de Rede)
+                "porto_primario": "",    # Novo campo: Porto Primário do PDO(in)
+                "data_agendamento": "",  # Novo campo: Data Início Agendamento
+                "estado_intervencao": "" # Novo campo: Estado da Intervenção
             }
 
             # DESCRIÇÃO
@@ -179,6 +208,38 @@ class WondercomClient:
                 dados_wo["morada"] = morada_valor.strip()
             except Exception as e:
                 logger.warning(f"Não foi possível extrair Morada: {e}")
+
+            # DONA DE REDE (PDO)
+            try:
+                dona_rede_element = self.driver.find_element(By.XPATH, "//span[text()='Dona de Rede:']/ancestor::tr//input")
+                dona_rede_valor = dona_rede_element.get_attribute("value")
+                dados_wo["dona_rede"] = dona_rede_valor.strip()
+            except Exception as e:
+                logger.warning(f"Não foi possível extrair Dona de Rede: {e}")
+
+            # PORTO PRIMÁRIO
+            try:
+                porto_element = self.driver.find_element(By.XPATH, "//span[text()='Porto Primário do PDO(in):']/ancestor::tr//input")
+                porto_valor = porto_element.get_attribute("value")
+                dados_wo["porto_primario"] = porto_valor.strip()
+            except Exception as e:
+                logger.warning(f"Não foi possível extrair Porto Primário: {e}")
+
+            # DATA INÍCIO AGENDAMENTO
+            try:
+                data_element = self.driver.find_element(By.XPATH, "//span[text()='Data Início Agendamento:']/ancestor::tr//input")
+                data_valor = data_element.get_attribute("value")
+                dados_wo["data_agendamento"] = data_valor.strip()
+            except Exception as e:
+                logger.warning(f"Não foi possível extrair Data Início Agendamento: {e}")
+                
+            # ESTADO DA INTERVENÇÃO
+            try:
+                estado_intervencao_element = self.driver.find_element(By.XPATH, "//span[text()='Estado da Intervenção:']/ancestor::tr//input")
+                estado_intervencao_valor = estado_intervencao_element.get_attribute("value")
+                dados_wo["estado_intervencao"] = estado_intervencao_valor.strip()
+            except Exception as e:
+                logger.warning(f"Não foi possível extrair Estado da Intervenção: {e}")
 
             # COORDENADAS (busca dentro da descrição)
             descricao = dados_wo.get("descricao", "")

@@ -100,11 +100,15 @@ class WondercomIntegration:
                         "endereco": dados_wo.get('morada', 'N/A'),
                         "pdo": dados_wo.get('slid', 'N/A'),
                         "cor_fibra": dados_wo.get('fibra', 'N/A'),
-                        "cor_fibra_hex": "#0000FF",  # Valor padrão, pode ser extraído se disponível
+                        "cor_fibra_hex": client.cor_para_hex(dados_wo.get('fibra', '')),
                         "latitude": None,
                         "longitude": None,
                         "estado": dados_wo.get('estado', 'N/A'),
-                        "descricao": dados_wo.get('descricao', 'N/A')
+                        "descricao": dados_wo.get('descricao', 'N/A'),
+                        "dona_rede": dados_wo.get('dona_rede', 'N/A'),
+                        "porto_primario": dados_wo.get('porto_primario', 'N/A'),
+                        "data_agendamento": dados_wo.get('data_agendamento', 'N/A'),
+                        "estado_intervencao": dados_wo.get('estado_intervencao', 'N/A')
                     }
                 }
                 
