@@ -292,6 +292,13 @@ const WorkOrderAllocation = () => {
       return;
     }
     
+    // Verificar se o usuário está autenticado
+    if (!authToken || !user) {
+      toast.error("Você precisa estar autenticado para realizar esta operação");
+      setError("Erro de autenticação. Por favor, faça login novamente.");
+      return;
+    }
+    
     // Verificar se a WO está no cache do usuário atual
     if (user?.id) {
       const cachedWO = obterWOCache(workOrderNumber, user.id);
@@ -325,22 +332,30 @@ const WorkOrderAllocation = () => {
       // Endpoint completo com base na configuração
       const endpoint = `${API_BASE_URL}/api/wondercom/allocate`;
       logDebug("Fazendo requisição para:", endpoint);
+      logDebug("Token de autenticação:", authToken ? "Presente" : "Ausente");
+      logDebug("Credenciais do usuário:", {
+        username: user?.usuario_portal ? "Presente" : "Ausente",
+        password: user?.senha_portal ? "Presente" : "Ausente"
+      });
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
       
+      // Garantir que o token seja enviado com o prefixo Bearer
+      const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+      
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          "Authorization": tokenFormatado,
         },
         body: JSON.stringify({
           work_order_id: workOrderNumber,
           credentials: {
-            username: user?.usuario_portal,
-            password: user?.senha_portal
+            username: user?.usuario_portal || "",
+            password: user?.senha_portal || ""
           }
         }),
         signal: controller.signal
@@ -360,7 +375,9 @@ const WorkOrderAllocation = () => {
         
         // Mensagens de erro mais específicas
         if (response.status === 401) {
-          mensagemErro = "Erro de autenticação. Verifique suas credenciais.";
+          mensagemErro = "Erro de autenticação. Suas credenciais podem ter expirado. Por favor, faça login novamente.";
+          // Forçar logout se o token estiver inválido
+          // Se você tiver uma função de logout no contexto de autenticação, pode chamá-la aqui
         } else if (response.status === 404) {
           mensagemErro = "WO não encontrada. Verifique o número informado.";
         } else if (response.status === 500) {
@@ -372,7 +389,6 @@ const WorkOrderAllocation = () => {
         setError(mensagemErro);
         setProgress(100); // Completar a barra mesmo em caso de erro
         setIsLoading(false);
-        setShowHistorico(true);
         return;
       }
       
@@ -493,7 +509,6 @@ const WorkOrderAllocation = () => {
       
       setError(mensagemErro);
       setProgress(100); // Completar a barra mesmo em caso de erro
-      setShowHistorico(true);
     } finally {
       setIsLoading(false);
     }
@@ -622,6 +637,17 @@ const WorkOrderAllocation = () => {
         </form>
       </div>
       
+      {/* Mensagem de erro - Reposicionada para ficar logo abaixo do formulário */}
+      {error && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
+          <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+          <div>
+            <h3 className="font-medium text-red-700">Erro na alocação</h3>
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        </div>
+      )}
+      
       {/* Histórico de WOs */}
       {historicoWOs.length > 0 && showHistorico && (
         <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -669,17 +695,6 @@ const WorkOrderAllocation = () => {
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-      
-      {/* Mensagem de erro */}
-      {error && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
-          <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
-          <div>
-            <h3 className="font-medium text-red-700">Erro na alocação</h3>
-            <p className="text-sm text-red-600">{error}</p>
           </div>
         </div>
       )}
