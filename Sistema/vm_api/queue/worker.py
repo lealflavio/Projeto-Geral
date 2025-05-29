@@ -35,12 +35,18 @@ def process_allocate_wo_task(task_data):
     Returns:
         dict: Resultado do processamento.
     """
+        fix-queue-workers
     logger.info(f"Processando tarefa de alocação de WO: {task_data}")
     
     work_order_id = task_data.get('work_order_id')
+        
+    logger.info(f"Processando tarefa de criação de pastas: {task_data}")
+
+        master
     user_id = task_data.get('user_id')
     credentials = task_data.get('credentials', {})
     callback_url = task_data.get('callback_url')
+        fix-queue-workers
     job_id = task_data.get('job_id')
     
     try:
@@ -56,6 +62,74 @@ def process_allocate_wo_task(task_data):
         send_callback(callback_url, user_id, job_id, "success", result)
         return result
         
+        
+
+    try:
+        # Importar o módulo M1_Criar_Tecnico.py
+        criar_tecnico_module = import_criar_tecnico_module()
+        if not criar_tecnico_module:
+            result = {
+                "status": "error",
+                "message": "Erro ao importar o módulo de criação de pastas"
+            }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+            return result
+
+        # Chamar a função criar_tecnico do módulo
+        # Nota: Estamos usando uma senha temporária que será alterada pelo usuário depois
+        success = criar_tecnico_module.criar_tecnico(
+            nome_completo=user_name,
+            email=user_email,
+            usuario_portal=user_id,
+            senha_portal="temp_password_123"
+        )
+
+        if success:
+            # Obter os IDs das pastas criadas
+            tecnicos_json_path = Path("/home/flavioleal/Sistema/tecnicos/tecnicos.json")
+            if tecnicos_json_path.exists():
+                with open(tecnicos_json_path, "r", encoding="utf-8") as f_in:
+                    tecnicos_data = json.load(f_in)
+
+                # Encontrar o usuário recém-criado
+                user_data = next((t for t in tecnicos_data if t["email"] == user_email), None)
+
+                if user_data:
+                    result = {
+                        "status": "success",
+                        "message": "Pastas criadas com sucesso",
+                        "result": {
+                            "drive_folders": {
+                                "user_folder_id": user_data.get("pasta_drive_id"),
+                                "novos_folder_id": user_data.get("pasta_novos_id")
+                            },
+                            "vm_folders": {
+                                "user_folder": user_data.get("pasta_vm"),
+                                "novos_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "novos"),
+                                "processados_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "processados"),
+                                "erros_folder": os.path.join(user_data.get("pasta_vm", ""), "pdfs", "erro")
+                            }
+                        }
+                    }
+                    send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+                    return result
+
+            # Fallback se não conseguir obter os IDs específicos
+            result = {
+                "status": "success",
+                "message": "Pastas criadas com sucesso, mas não foi possível obter os IDs"
+            }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+            return result
+        else:
+            result = {
+                "status": "error",
+                "message": "Falha ao criar pastas"
+            }
+            send_callback(callback_url, user_id, task_data.get('job_id'), "error", result)
+            return result
+
+        master
     except Exception as e:
         logger.error(f"Erro ao alocar ordem de trabalho {work_order_id}: {str(e)}")
         result = {
@@ -75,26 +149,44 @@ def process_process_pdf_task(task_data):
     Returns:
         dict: Resultado do processamento.
     """
+        fix-queue-workers
     logger.info(f"Processando tarefa de processamento de PDF: {task_data}")
     
     pdf_path = task_data.get('pdf_path')
+       
+    logger.info(f"Processando tarefa de processamento de arquivos: {task_data}")
+
+        master
     user_id = task_data.get('user_id')
     callback_url = task_data.get('callback_url')
+        fix-queue-workers
     job_id = task_data.get('job_id')
     
     try:
         # Aqui você implementaria a lógica para processar o PDF
         # Por exemplo, chamar o adaptador de extração
         
+       
+
+    try:
+        # Aqui você implementaria a lógica para processar os arquivos
+        # Por exemplo, chamar um script existente que faz o download e processamento
+
+        master
         # Simulação de processamento bem-sucedido
         result = {
             "status": "success",
             "message": f"PDF {pdf_path} processado com sucesso"
         }
+        fix-queue-workers
         
         send_callback(callback_url, user_id, job_id, "success", result)
+       
+
+        send_callback(callback_url, user_id, task_data.get('job_id'), "success", result)
+        master
         return result
-        
+
     except Exception as e:
         logger.error(f"Erro ao processar PDF {pdf_path}: {str(e)}")
         result = {
@@ -118,7 +210,7 @@ def send_callback(callback_url, user_id, job_id, status, result):
     if not callback_url:
         logger.info("Nenhuma URL de callback fornecida, ignorando.")
         return
-    
+
     try:
         payload = {
             "user_id": user_id,
@@ -126,12 +218,12 @@ def send_callback(callback_url, user_id, job_id, status, result):
             "status": status,
             "result": result
         }
-        
+
         response = requests.post(callback_url, json=payload)
         response.raise_for_status()
-        
+
         logger.info(f"Callback enviado com sucesso para {callback_url}")
-        
+
     except Exception as e:
         logger.error(f"Erro ao enviar callback para {callback_url}: {str(e)}")
 
@@ -147,6 +239,7 @@ def process_task(task):
     """
     task_type = task.get('type')
     task_data = task.get('data', {})
+        fix-queue-workers
     
     # Adicionar job_id aos dados da tarefa para uso nas funções de processamento
     if 'job_id' in task and 'job_id' not in task_data:
@@ -160,11 +253,19 @@ def process_task(task):
         return process_allocate_wo_task(task_data)
     elif task_type == 'process_pdf':
         return process_process_pdf_task(task_data)
+        
+
+    if task_type == 'create_folders':
+        return process_create_folders_task(task_data)
+    elif task_type == 'process_files':
+        return process_files_task(task_data)
+        master
     else:
         logger.error(f"Tipo de tarefa desconhecido: {task_type}")
         return {
             "status": "error",
             "message": f"Tipo de tarefa desconhecido: {task_type}"
+        fix-queue-workers
         }
 
 def run_worker():
@@ -205,3 +306,6 @@ def run_worker():
 
 if __name__ == "__main__":
     run_worker()
+        
+        }
+         master
