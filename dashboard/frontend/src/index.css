@@ -1,8 +1,7 @@
+@import './styles/variables.css';
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
-
-@import './styles/variables.css';
+@tailwind utilities;;
 
 /* Otimizações para dispositivos móveis */
 .mobile-device button,
