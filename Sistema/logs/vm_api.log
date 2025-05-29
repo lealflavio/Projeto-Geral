@@ -1,0 +1,7 @@
+nohup: ignoring input
+INFO:vm_api.adapters.orquestrador_adapter:Módulo M2_Orquestrador_PDFs importado com sucesso
+INFO:vm_api.adapters.orquestrador_adapter:Módulo WondercomClient importado com sucesso
+ * Serving Flask app 'app'
+ * Debug mode: off
+Address already in use
+Port 5000 is in use by another program. Either identify and stop that program, or start the server with a different port.
