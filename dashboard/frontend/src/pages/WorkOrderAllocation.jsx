@@ -4,7 +4,15 @@ import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle,
 import CardInfo from "../components/CardInfo";
 import { toast } from "react-toastify";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://zincoapp.pt"; // Adicionado o domínio base
+// Configuração dinâmica do endpoint da API
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://dashboard-backend-s1bx.onrender.com";
+
+// Função para registrar logs de depuração em ambiente de desenvolvimento
+const logDebug = (message, data) => {
+  if (import.meta.env.DEV) {
+    console.log(`[DEBUG] ${message}`, data);
+  }
+};
 
 const WorkOrderAllocation = () => {
   const [workOrderNumber, setWorkOrderNumber] = useState("");
@@ -26,6 +34,12 @@ const WorkOrderAllocation = () => {
       }
     };
   }, [progressInterval]);
+
+  // Log da configuração em ambiente de desenvolvimento
+  useEffect(() => {
+    logDebug("API Base URL configurada:", API_BASE_URL);
+    logDebug("Ambiente:", import.meta.env.MODE);
+  }, []);
 
   const handleChange = (e) => {
     setWorkOrderNumber(e.target.value);
@@ -58,14 +72,16 @@ const WorkOrderAllocation = () => {
     setProgressInterval(interval);
     
     try {
-      // Corrigido o endpoint para incluir o domínio base
-      const response = await fetch(`${API_BASE_URL}/api/wondercom/allocate`, {
+      // Endpoint completo com base na configuração
+      const endpoint = `${API_BASE_URL}/api/wondercom/allocate`;
+      logDebug("Fazendo requisição para:", endpoint);
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        // Corrigida a estrutura do corpo da requisição para corresponder ao esperado pela API
         body: JSON.stringify({
           work_order_id: workOrderNumber,
           credentials: {
@@ -76,6 +92,7 @@ const WorkOrderAllocation = () => {
       });
       
       const data = await response.json();
+      logDebug("Resposta da API:", data);
       
       // Limpar o intervalo quando os dados retornarem
       clearInterval(interval);
@@ -114,6 +131,7 @@ const WorkOrderAllocation = () => {
       setProgress(100); // Garantir que a barra esteja completa
       
     } catch (err) {
+      logDebug("Erro na requisição:", err);
       clearInterval(interval);
       setProgressInterval(null);
       setError("Erro de conexão. Tente novamente.");
