@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuthContext } from "../context/AuthContext";
-import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader } from "lucide-react";
+import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader, Eye } from "lucide-react";
 import CardInfo from "../components/CardInfo";
 import { toast } from "react-toastify";
 
@@ -99,9 +99,10 @@ const obterHistoricoWOs = (userId) => {
       .filter(([_, entry]) => entry.expira > agora)
       .map(([numero, entry]) => ({
         numero,
-        morada: entry.data.morada,
-        dataAgendamento: entry.data.dataAgendamento,
+        data: entry.data.dataAgendamento,
+        tipoInstalacao: entry.data.tipoInstalacao || "Fibra + TV",
         status: entry.data.status || "pendente",
+        estadoIntervencao: entry.data.estadoIntervencao || "Pendente",
         timestamp: entry.timestamp
       }))
       .sort((a, b) => b.timestamp - a.timestamp);
@@ -187,6 +188,49 @@ const formatarEstadoWO = (estado) => {
     .join(' ');
 };
 
+// Função para traduzir o estado da intervenção para português
+const traduzirEstadoIntervencao = (estado) => {
+  if (!estado) return "Pendente";
+  
+  const estadoLower = estado.toLowerCase();
+  
+  const traducoes = {
+    "job done": "Trabalho Realizado",
+    "allocated": "Alocado",
+    "job start": "Trabalho Iniciado",
+    "in progress": "Em Progresso",
+    "faturado": "Faturado",
+    "pendente faturacao": "Pendente Faturação",
+    "job not done": "Trabalho Não Realizado"
+  };
+  
+  // Verificar correspondências parciais
+  for (const [ingles, portugues] of Object.entries(traducoes)) {
+    if (estadoLower.includes(ingles.toLowerCase())) {
+      return portugues;
+    }
+  }
+  
+  return formatarEstadoWO(estado);
+};
+
+// Função para determinar a cor do estado da intervenção
+const determinarCorEstadoIntervencao = (estado) => {
+  if (!estado) return { bg: "bg-yellow-50", border: "border-yellow-100", text: "text-yellow-600", icon: Clock };
+  
+  const estadoLower = estado.toLowerCase();
+  
+  if (estadoLower.includes("realizado") || estadoLower.includes("done") || estadoLower.includes("faturado")) {
+    return { bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600", icon: CheckCircle };
+  }
+  
+  if (estadoLower.includes("não") || estadoLower.includes("not") || estadoLower.includes("erro") || estadoLower.includes("falha")) {
+    return { bg: "bg-red-50", border: "border-red-100", text: "text-red-600", icon: AlertCircle };
+  }
+  
+  return { bg: "bg-yellow-50", border: "border-yellow-100", text: "text-yellow-600", icon: Clock };
+};
+
 const WorkOrderAllocation = () => {
   const [workOrderNumber, setWorkOrderNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -231,6 +275,12 @@ const WorkOrderAllocation = () => {
     
     if (!workOrderNumber.trim()) {
       toast.error("Por favor, insira um número de WO válido");
+      return;
+    }
+    
+    // Validar se a WO tem 8 dígitos numéricos
+    if (!/^\d{8}$/.test(workOrderNumber)) {
+      toast.error("O número da WO deve conter exatamente 8 dígitos numéricos");
       return;
     }
     
@@ -289,7 +339,20 @@ const WorkOrderAllocation = () => {
       setProgressInterval(null);
       
       if (!response.ok) {
-        setError(data.message || "Erro ao alocar WO");
+        let mensagemErro = "Erro ao alocar WO";
+        
+        // Mensagens de erro mais específicas
+        if (response.status === 401) {
+          mensagemErro = "Erro de autenticação. Verifique suas credenciais.";
+        } else if (response.status === 404) {
+          mensagemErro = "WO não encontrada. Verifique o número informado.";
+        } else if (response.status === 500) {
+          mensagemErro = "Erro no servidor. Tente novamente mais tarde.";
+        } else if (data.message) {
+          mensagemErro = data.message;
+        }
+        
+        setError(mensagemErro);
         setProgress(100); // Completar a barra mesmo em caso de erro
         setIsLoading(false);
         return;
@@ -302,16 +365,16 @@ const WorkOrderAllocation = () => {
         // Formatar morada em duas linhas
         const moradaFormatada = formatarMorada(data.data.endereco);
         
-        // Formatar estado da WO
-        const estadoFormatado = formatarEstadoWO(data.data.estado || data.data.estado_intervencao || "");
+        // Formatar e traduzir estado da intervenção
+        const estadoIntervencao = traduzirEstadoIntervencao(data.data.estado_intervencao || "");
         
         // Determinar status para exibição visual
         let status = "pendente";
-        if (estadoFormatado.toLowerCase().includes("concluído") || 
-            estadoFormatado.toLowerCase().includes("finalizado")) {
+        if (estadoIntervencao.toLowerCase().includes("realizado") || 
+            estadoIntervencao.toLowerCase().includes("faturado")) {
           status = "concluído";
-        } else if (estadoFormatado.toLowerCase().includes("erro") || 
-                  estadoFormatado.toLowerCase().includes("falha")) {
+        } else if (estadoIntervencao.toLowerCase().includes("não") || 
+                  estadoIntervencao.toLowerCase().includes("erro")) {
           status = "erro";
         }
         
@@ -327,12 +390,10 @@ const WorkOrderAllocation = () => {
             lng: data.data.longitude || 0
           },
           dataAgendamento: data.data.data_agendamento || "N/A",
-          horario: data.data.horario || "N/A",
-          observacoes: estadoFormatado,
           status: status,
           donaRede: data.data.dona_rede || "N/A",
           portoEntrada: data.data.porto_primario || "N/A",
-          estadoIntervencao: formatarEstadoWO(data.data.estado_intervencao || ""),
+          estadoIntervencao: estadoIntervencao,
           cliente: data.data.descricao || "N/A",
           
           // Campos extraídos do texto
@@ -343,10 +404,8 @@ const WorkOrderAllocation = () => {
           
           // Campos adicionais para compatibilidade com a interface
           endereco: `${moradaFormatada.linha1}${moradaFormatada.linha2 ? '\n' + moradaFormatada.linha2 : ''}`,
-          tipoServico: data.data.tipo_servico || "Fibra + TV",
           tipoInstalacao: data.data.tipo_servico || "Fibra + TV",
-          tecnico: user?.name || "Técnico",
-          materiais: data.data.materiais || ["Cabo de fibra 10m", "Roteador Wi-Fi", "Splitter óptico"]
+          tecnico: user?.name || "Técnico"
         };
         
         setWorkOrderData(data);
@@ -374,7 +433,6 @@ const WorkOrderAllocation = () => {
           tipoBox: "Fibra Óptica",
           telefone: "Sim",
           dataAgendamento: "28/05/2025",
-          horario: "14:00 - 16:00",
           status: "pendente",
           tipoInstalacao: "Fibra + TV",
           tecnico: user?.name || "Técnico",
@@ -383,11 +441,9 @@ const WorkOrderAllocation = () => {
             lat: 38.7223,
             lng: -9.1393
           },
-          observacoes: "Cliente solicitou instalação rápida. Levar equipamento extra.",
-          materiais: ["Cabo de fibra 10m", "Roteador Wi-Fi", "Splitter óptico"],
           donaRede: "PDO123",
           portoEntrada: "Porto 5",
-          estadoIntervencao: "Em Andamento"
+          estadoIntervencao: "Em Progresso"
         };
         
         setWorkOrderData(data);
@@ -407,7 +463,7 @@ const WorkOrderAllocation = () => {
       logDebug("Erro na requisição:", err);
       clearInterval(interval);
       setProgressInterval(null);
-      setError("Erro de conexão. Tente novamente.");
+      setError("Erro de conexão. Verifique sua internet e tente novamente.");
       setProgress(100); // Completar a barra mesmo em caso de erro
     } finally {
       setIsLoading(false);
@@ -469,13 +525,13 @@ const WorkOrderAllocation = () => {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-[#333] mb-4">Alocar WO</h1>
+      <h1 className="text-xl font-semibold text-gray-800 mb-4">Alocar WO</h1>
       
       {/* Formulário de busca */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="workOrderNumber" className="block text-sm text-[#555] mb-1">
+            <label htmlFor="workOrderNumber" className="block text-sm text-gray-600 mb-1">
               Número da WO
             </label>
             <div className="relative">
@@ -485,17 +541,17 @@ const WorkOrderAllocation = () => {
                 value={workOrderNumber}
                 onChange={handleChange}
                 placeholder="Ex: 12345678"
-                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
                 disabled={isLoading}
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#999]" size={18} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             </div>
           </div>
           
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full bg-[#7C3AED] text-white py-3 rounded-xl font-semibold hover:bg-[#6B21A8] transition flex items-center justify-center gap-2 ${
+            className={`w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2 ${
               isLoading ? "opacity-70 cursor-not-allowed" : ""
             }`}
           >
@@ -514,11 +570,11 @@ const WorkOrderAllocation = () => {
             <div className="mt-4">
               <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-[#7C3AED] transition-all duration-500 ease-linear"
+                  className="h-full bg-purple-600 transition-all duration-500 ease-linear"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-[#777] mt-1 text-center">
+              <p className="text-xs text-gray-500 mt-1 text-center">
                 {progress < 100 ? "Processando solicitação..." : "Processamento concluído"}
               </p>
             </div>
@@ -529,51 +585,50 @@ const WorkOrderAllocation = () => {
       {/* Histórico de WOs */}
       {historicoWOs.length > 0 && !searchResult && (
         <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-[#333] mb-3">Histórico de WOs</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Histórico de WOs</h2>
           <div className="space-y-3">
-            {historicoWOs.slice(0, 6).map((wo) => (
-              <div 
-                key={wo.numero}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                onClick={() => carregarWOHistorico(wo.numero)}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
+            {historicoWOs.slice(0, 6).map((wo) => {
+              const estadoCores = determinarCorEstadoIntervencao(wo.estadoIntervencao);
+              const IconComponent = estadoCores.icon;
+              
+              return (
+                <div 
+                  key={wo.numero}
+                  className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"
+                  onClick={() => carregarWOHistorico(wo.numero)}
+                >
+                  <div className={`px-4 py-3 flex items-center justify-between ${estadoCores.bg} border-b ${estadoCores.border}`}>
                     <div className="flex items-center gap-2">
-                      {wo.status === 'concluído' ? (
-                        <CheckCircle size={18} className="text-emerald-500" />
-                      ) : wo.status === 'erro' ? (
-                        <AlertCircle size={18} className="text-red-500" />
-                      ) : (
-                        <Clock size={18} className="text-yellow-500" />
-                      )}
-                      <h3 className="font-medium text-[#7C3AED]">WO {wo.numero}</h3>
+                      <IconComponent size={16} className={estadoCores.text} />
+                      <span className="font-medium text-gray-800">WO #{wo.numero}</span>
                     </div>
-                    <p className="text-sm text-[#555] mt-1 truncate">
-                      {typeof wo.morada === 'object' 
-                        ? `${wo.morada.linha1}${wo.morada.linha2 ? ', ' + wo.morada.linha2 : ''}`
-                        : wo.morada}
-                    </p>
+                    <button
+                      className="text-purple-600 hover:text-purple-800 p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        carregarWOHistorico(wo.numero);
+                      }}
+                      aria-label="Ver detalhes"
+                    >
+                      <Eye size={18} />
+                    </button>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-[#777]">{wo.dataAgendamento}</p>
-                    <span className={`text-xs px-2 py-1 mt-1 inline-block rounded-full ${
-                      wo.status === 'concluído' 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : wo.status === 'erro'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {wo.status === 'concluído' 
-                        ? 'Concluído' 
-                        : wo.status === 'erro'
-                          ? 'Erro'
-                          : 'Pendente'}
-                    </span>
+                  
+                  <div className="p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Data</p>
+                        <p className="text-sm font-medium text-gray-800">{wo.data}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Tipo</p>
+                        <p className="text-sm font-medium text-gray-800">{wo.tipoInstalacao}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -593,39 +648,31 @@ const WorkOrderAllocation = () => {
       {searchResult && (
         <div className="grid grid-cols-1 gap-4 animate-fadeIn">
           <div className="bg-white rounded-xl shadow overflow-hidden">
-            <div className={`p-4 ${
-              searchResult.status === 'concluído' 
-                ? 'bg-emerald-50 border-b border-emerald-100' 
-                : searchResult.status === 'erro'
-                  ? 'bg-red-50 border-b border-red-100'
-                  : 'bg-yellow-50 border-b border-yellow-100'
-            }`}>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  {searchResult.status === 'concluído' ? (
-                    <CheckCircle size={20} className="text-emerald-500" />
-                  ) : searchResult.status === 'erro' ? (
-                    <AlertCircle size={20} className="text-red-500" />
-                  ) : (
-                    <Clock size={20} className="text-yellow-500" />
-                  )}
-                  <h3 className="font-medium">WO #{searchResult.wo}</h3>
+            {/* Cabeçalho com estado */}
+            {(() => {
+              const estadoCores = determinarCorEstadoIntervencao(searchResult.estadoIntervencao);
+              const IconComponent = estadoCores.icon;
+              
+              return (
+                <div className={`p-4 ${estadoCores.bg} border-b ${estadoCores.border}`}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <IconComponent size={20} className={estadoCores.text} />
+                      <h3 className="font-medium">WO #{searchResult.wo}</h3>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      searchResult.estadoIntervencao.toLowerCase().includes("realizado") || searchResult.estadoIntervencao.toLowerCase().includes("faturado")
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : searchResult.estadoIntervencao.toLowerCase().includes("não") || searchResult.estadoIntervencao.toLowerCase().includes("erro")
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {searchResult.estadoIntervencao}
+                    </span>
+                  </div>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  searchResult.status === 'concluído' 
-                    ? 'bg-emerald-100 text-emerald-700' 
-                    : searchResult.status === 'erro'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {searchResult.status === 'concluído' 
-                    ? 'Concluído' 
-                    : searchResult.status === 'erro'
-                      ? 'Erro'
-                      : 'Pendente'}
-                </span>
-              </div>
-            </div>
+              );
+            })()}
             
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -633,12 +680,12 @@ const WorkOrderAllocation = () => {
                 <div>
                   {/* SLID */}
                   <div className="mb-6">
-                    <h3 className="text-xs text-muted mb-1">SLID</h3>
+                    <h3 className="text-xs text-gray-500 mb-1">SLID</h3>
                     <div className="flex items-start gap-2">
-                      <p className="text-text font-medium flex-1">{searchResult.slid || "CAKIBALE"}</p>
+                      <p className="text-gray-800 font-medium flex-1">{searchResult.slid || "N/A"}</p>
                       <button
-                        className={`text-primary p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
-                        onClick={() => handleCopyToClipboard(searchResult.slid || "CAKIBALE", 'slid')}
+                        className={`text-purple-600 p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
+                        onClick={() => handleCopyToClipboard(searchResult.slid || "N/A", 'slid')}
                         title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
                       >
                         <Clipboard size={16} />
@@ -648,30 +695,36 @@ const WorkOrderAllocation = () => {
                   
                   {/* Fibra */}
                   <div className="mb-6">
-                    <h3 className="text-xs text-muted mb-1">Fibra</h3>
+                    <h3 className="text-xs text-gray-500 mb-1">Fibra</h3>
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-4 h-4 rounded-full" 
                         style={{ backgroundColor: determinarCorFibra(searchResult.corFibra, searchResult.corFibraHex).hex }}
                       ></div>
-                      <p className="text-text">{searchResult.corFibra}</p>
+                      <p className="text-gray-800">{searchResult.corFibra}</p>
                     </div>
+                  </div>
+                  
+                  {/* Dona de Rede (movido para depois de Fibra) */}
+                  <div className="mb-6">
+                    <h3 className="text-xs text-gray-500 mb-1">Dona de Rede</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.donaRede}</p>
                   </div>
                   
                   {/* Morada em duas linhas */}
                   <div className="mb-2">
-                    <h3 className="text-xs text-muted mb-1">Morada</h3>
+                    <h3 className="text-xs text-gray-500 mb-1">Morada</h3>
                     <div className="flex items-start gap-2">
                       <div className="flex-1">
-                        <p className="text-text">
+                        <p className="text-gray-800">
                           {searchResult.morada.linha1 || (typeof searchResult.morada === 'string' ? searchResult.morada : 'N/A')}
                         </p>
                         {searchResult.morada.linha2 && (
-                          <p className="text-text text-sm">{searchResult.morada.linha2}</p>
+                          <p className="text-gray-800 text-sm">{searchResult.morada.linha2}</p>
                         )}
                       </div>
                       <button
-                        className={`text-primary p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
+                        className={`text-purple-600 p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
                         onClick={() => handleCopyToClipboard(
                           typeof searchResult.morada === 'object'
                             ? `${searchResult.morada.linha1}${searchResult.morada.linha2 ? '\n' + searchResult.morada.linha2 : ''}`
@@ -688,7 +741,7 @@ const WorkOrderAllocation = () => {
                   {/* Botão de mapa logo abaixo da morada */}
                   <div className="mb-6">
                     <button
-                      className="flex items-center gap-2 text-primary hover:underline mt-2"
+                      className="flex items-center gap-2 text-purple-600 hover:underline mt-2"
                       onClick={abrirMapa}
                     >
                       <MapPin size={18} />
@@ -699,86 +752,48 @@ const WorkOrderAllocation = () => {
                   
                   {/* Acesso */}
                   <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Acesso</h3>
-                    <p className="text-text font-medium">{searchResult.acesso}</p>
-                  </div>
-                  
-                  {/* Nº de Box */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Nº de Box</h3>
-                    <p className="text-text font-medium">{searchResult.numBox}</p>
+                    <h3 className="text-xs text-gray-500 mb-1">Acesso</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.acesso}</p>
                   </div>
                 </div>
                 
                 {/* Coluna 2 */}
                 <div>
+                  {/* Nº de Box */}
+                  <div className="mb-4">
+                    <h3 className="text-xs text-gray-500 mb-1">Nº de Box</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.numBox}</p>
+                  </div>
+                  
                   {/* Tipo de Box */}
                   <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Tipo de Box</h3>
-                    <p className="text-text font-medium">{searchResult.tipoBox}</p>
+                    <h3 className="text-xs text-gray-500 mb-1">Tipo de Box</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.tipoBox}</p>
                   </div>
                   
                   {/* Instalar Telefone? */}
                   <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Instalar Telefone?</h3>
-                    <p className="text-text font-medium">{searchResult.telefone}</p>
+                    <h3 className="text-xs text-gray-500 mb-1">Instalar Telefone?</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.telefone}</p>
                   </div>
                   
                   <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Data de Agendamento</h3>
-                    <p className="text-text">{searchResult.dataAgendamento}</p>
+                    <h3 className="text-xs text-gray-500 mb-1">Data de Agendamento</h3>
+                    <p className="text-gray-800">{searchResult.dataAgendamento}</p>
                   </div>
                   
+                  {/* Porto Primário */}
                   <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Horário</h3>
-                    <p className="text-text">{searchResult.horario}</p>
+                    <h3 className="text-xs text-gray-500 mb-1">Porto Primário</h3>
+                    <p className="text-gray-800 font-medium">{searchResult.portoEntrada}</p>
                   </div>
-                  
-                  {/* Observações */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Observações</h3>
-                    <p className="text-text text-sm">{searchResult.observacoes}</p>
-                  </div>
-                  
-                  {/* Dona de Rede (novo campo) */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Dona de Rede</h3>
-                    <p className="text-text font-medium">{searchResult.donaRede}</p>
-                  </div>
-                  
-                  {/* Porto Primário (novo campo) */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Porto Primário</h3>
-                    <p className="text-text font-medium">{searchResult.portoEntrada}</p>
-                  </div>
-                  
-                  {/* Estado da Intervenção (novo campo) */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-muted mb-1">Estado da Intervenção</h3>
-                    <p className="text-text font-medium">{searchResult.estadoIntervencao}</p>
-                  </div>
-                  
-                  {/* Materiais */}
-                  {searchResult.materiais && searchResult.materiais.length > 0 && (
-                    <div className="mb-4">
-                      <h3 className="text-xs text-muted mb-1">Materiais Necessários</h3>
-                      <ul className="space-y-1">
-                        {searchResult.materiais.map((material, index) => (
-                          <li key={index} className="text-sm text-text flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
-                            {material}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </div>
               </div>
               
               {/* Botões de ação - Apenas Nova Busca */}
               <div className="mt-6 flex justify-center">
                 <button
-                  className="w-full md:w-1/2 bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition"
+                  className="w-full md:w-1/2 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
                   onClick={() => setSearchResult(null)}
                 >
                   Nova Busca
