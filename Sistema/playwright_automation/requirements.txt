@@ -1,0 +1,5 @@
+playwright==1.40.0
+asyncio==3.4.3
+beautifulsoup4==4.12.2
+flask==2.3.3
+redis==4.6.0
