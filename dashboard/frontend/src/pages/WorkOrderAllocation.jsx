@@ -354,8 +354,8 @@ const WorkOrderAllocation = () => {
         body: JSON.stringify({
           work_order_id: workOrderNumber,
           credentials: {
-            username: user.usuario_portal,
-            password: user.senha_portal
+            username: user?.usuario_portal || "",
+            password: user?.senha_portal || ""
           }
         }),
         signal: controller.signal
