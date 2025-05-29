@@ -114,7 +114,7 @@ const obterHistoricoWOs = (userId) => {
 
 // Função atualizada para formatar a morada em duas linhas
 const formatarMorada = (morada) => {
-  if (!morada) return { linha1: "N/A", linha2: "" };
+  if (!morada) return { linha1: "", linha2: "" };
   
   // Limpar a morada de caracteres estranhos
   const moradaLimpa = morada
@@ -156,19 +156,19 @@ const extrairInformacoes = (textoCliente) => {
   
   // Extrair Acesso (9 dígitos após "Access:")
   const accessMatch = textoCliente.match(/Access:(\d{9})/);
-  const acesso = accessMatch ? accessMatch[1] : "N/A";
+  const acesso = accessMatch ? accessMatch[1] : "";
   
   // Extrair Nº de Box
   const boxMatch = textoCliente.match(/NUMERO_TV_BOXES:\s*(\d+)/);
-  const numBox = boxMatch ? boxMatch[1] : "N/A";
+  const numBox = boxMatch ? boxMatch[1] : "";
   
   // Extrair Tipo de Box
   const tipoBoxMatch = textoCliente.match(/Set-Top-Boxes:\s*([^V][^\n]+?)(?=\s+Velocidade)/);
-  const tipoBox = tipoBoxMatch ? tipoBoxMatch[1].trim() : "N/A";
+  const tipoBox = tipoBoxMatch ? tipoBoxMatch[1].trim() : "";
   
   // Extrair Telefone
   const telefoneMatch = textoCliente.match(/Entrega de equipamentos:\s*([^\n]+?)(?=\s+Modelo)/);
-  const telefone = telefoneMatch ? telefoneMatch[1].trim() : "N/A";
+  const telefone = telefoneMatch ? telefoneMatch[1].trim() : "";
   
   // Extrair SLID (se existir no texto)
   const slidMatch = textoCliente.match(/SLID:\s*([^\s,;]+)/);
@@ -179,7 +179,7 @@ const extrairInformacoes = (textoCliente) => {
 
 // Função para formatar o estado da WO
 const formatarEstadoWO = (estado) => {
-  if (!estado) return "N/A";
+  if (!estado) return "";
   
   return estado
     .toLowerCase()
@@ -241,6 +241,7 @@ const WorkOrderAllocation = () => {
   const [progress, setProgress] = useState(0);
   const [progressInterval, setProgressInterval] = useState(null);
   const [historicoWOs, setHistoricoWOs] = useState([]);
+  const [showHistorico, setShowHistorico] = useState(true);
   
   const { authToken, user } = useAuthContext();
 
@@ -266,12 +267,19 @@ const WorkOrderAllocation = () => {
     }
   }, [user?.id]);
 
+  // Efeito para controlar a visibilidade do histórico
+  useEffect(() => {
+    setShowHistorico(!searchResult);
+  }, [searchResult]);
+
   const handleChange = (e) => {
     setWorkOrderNumber(e.target.value);
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     
     if (!workOrderNumber.trim()) {
       toast.error("Por favor, insira um número de WO válido");
@@ -289,6 +297,7 @@ const WorkOrderAllocation = () => {
       const cachedWO = obterWOCache(workOrderNumber, user.id);
       if (cachedWO) {
         setSearchResult(cachedWO);
+        setShowHistorico(false);
         return;
       }
     }
@@ -297,6 +306,7 @@ const WorkOrderAllocation = () => {
     setError(null);
     setSearchResult(null);
     setProgress(0);
+    setShowHistorico(false);
     
     // Iniciar a barra de progresso
     const interval = setInterval(() => {
@@ -316,6 +326,10 @@ const WorkOrderAllocation = () => {
       const endpoint = `${API_BASE_URL}/api/wondercom/allocate`;
       logDebug("Fazendo requisição para:", endpoint);
       
+      // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+      
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -329,7 +343,10 @@ const WorkOrderAllocation = () => {
             password: user?.senha_portal
           }
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       const data = await response.json();
       logDebug("Resposta da API:", data);
@@ -347,7 +364,7 @@ const WorkOrderAllocation = () => {
         } else if (response.status === 404) {
           mensagemErro = "WO não encontrada. Verifique o número informado.";
         } else if (response.status === 500) {
-          mensagemErro = "Erro no servidor. Tente novamente mais tarde.";
+          mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
         } else if (data.message) {
           mensagemErro = data.message;
         }
@@ -355,6 +372,7 @@ const WorkOrderAllocation = () => {
         setError(mensagemErro);
         setProgress(100); // Completar a barra mesmo em caso de erro
         setIsLoading(false);
+        setShowHistorico(true);
         return;
       }
       
@@ -378,29 +396,32 @@ const WorkOrderAllocation = () => {
           status = "erro";
         }
         
+        // Usar o campo acesso diretamente da API se disponível
+        const acessoFinal = data.data.acesso || infoCliente.acesso || "";
+        
         // Criar objeto de resultado com os campos da nova API
         const resultado = {
           wo: workOrderNumber,
-          slid: data.data.pdo || "N/A",
-          corFibra: data.data.cor_fibra || "N/A",
+          slid: data.data.pdo || "",
+          corFibra: data.data.cor_fibra || "",
           corFibraHex: data.data.cor_fibra_hex || "#CCCCCC",
           morada: moradaFormatada,
           coordenadas: {
             lat: data.data.latitude || 0,
             lng: data.data.longitude || 0
           },
-          dataAgendamento: data.data.data_agendamento || "N/A",
+          dataAgendamento: data.data.data_agendamento || "",
           status: status,
-          donaRede: data.data.dona_rede || "N/A",
-          portoEntrada: data.data.porto_primario || "N/A",
+          donaRede: data.data.dona_rede || "",
+          portoEntrada: data.data.porto_primario || "",
           estadoIntervencao: estadoIntervencao,
-          cliente: data.data.descricao || "N/A",
+          cliente: data.data.descricao || "",
           
-          // Campos extraídos do texto
-          acesso: infoCliente.acesso || "N/A",
-          numBox: infoCliente.numBox || "N/A",
-          tipoBox: infoCliente.tipoBox || "N/A",
-          telefone: infoCliente.telefone || "N/A",
+          // Campos extraídos do texto ou da API
+          acesso: acessoFinal,
+          numBox: infoCliente.numBox || "",
+          tipoBox: infoCliente.tipoBox || "",
+          telefone: infoCliente.telefone || "",
           
           // Campos adicionais para compatibilidade com a interface
           endereco: `${moradaFormatada.linha1}${moradaFormatada.linha2 ? '\n' + moradaFormatada.linha2 : ''}`,
@@ -463,8 +484,16 @@ const WorkOrderAllocation = () => {
       logDebug("Erro na requisição:", err);
       clearInterval(interval);
       setProgressInterval(null);
-      setError("Erro de conexão. Verifique sua internet e tente novamente.");
+      
+      let mensagemErro = "Erro de conexão. Verifique sua internet e tente novamente.";
+      
+      if (err.name === 'AbortError') {
+        mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
+      }
+      
+      setError(mensagemErro);
       setProgress(100); // Completar a barra mesmo em caso de erro
+      setShowHistorico(true);
     } finally {
       setIsLoading(false);
     }
@@ -498,10 +527,16 @@ const WorkOrderAllocation = () => {
       const cachedWO = obterWOCache(numero, user.id);
       if (cachedWO) {
         setSearchResult(cachedWO);
+        setShowHistorico(false);
         return;
       }
     }
-    handleSubmit({ preventDefault: () => {} });
+    handleSubmit();
+  };
+
+  const voltarParaHistorico = () => {
+    setSearchResult(null);
+    setShowHistorico(true);
   };
 
   const determinarCorFibra = (cor, corHex) => {
@@ -523,6 +558,11 @@ const WorkOrderAllocation = () => {
     return cores[cor] || { hex: "#CCCCCC" };
   };
 
+  // Função para verificar se um campo tem valor válido para exibição
+  const temValor = (valor) => {
+    return valor && valor !== "N/A" && valor !== "";
+  };
+
   return (
     <div className="p-4 md:p-6">
       <h1 className="text-xl font-semibold text-gray-800 mb-4">Alocar WO</h1>
@@ -541,7 +581,7 @@ const WorkOrderAllocation = () => {
                 value={workOrderNumber}
                 onChange={handleChange}
                 placeholder="Ex: 12345678"
-                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                 disabled={isLoading}
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -551,7 +591,7 @@ const WorkOrderAllocation = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2 ${
+            className={`w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2 ${
               isLoading ? "opacity-70 cursor-not-allowed" : ""
             }`}
           >
@@ -570,7 +610,7 @@ const WorkOrderAllocation = () => {
             <div className="mt-4">
               <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-purple-600 transition-all duration-500 ease-linear"
+                  className="h-full bg-blue-600 transition-all duration-500 ease-linear"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
@@ -583,7 +623,7 @@ const WorkOrderAllocation = () => {
       </div>
       
       {/* Histórico de WOs */}
-      {historicoWOs.length > 0 && !searchResult && (
+      {historicoWOs.length > 0 && showHistorico && (
         <div className="bg-white rounded-xl shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-3">Histórico de WOs</h2>
           <div className="space-y-3">
@@ -594,16 +634,16 @@ const WorkOrderAllocation = () => {
               return (
                 <div 
                   key={wo.numero}
-                  className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"
+                  className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm cursor-pointer"
                   onClick={() => carregarWOHistorico(wo.numero)}
                 >
                   <div className={`px-4 py-3 flex items-center justify-between ${estadoCores.bg} border-b ${estadoCores.border}`}>
                     <div className="flex items-center gap-2">
                       <IconComponent size={16} className={estadoCores.text} />
-                      <span className="font-medium text-gray-800">WO #{wo.numero}</span>
+                      <span className="font-medium text-gray-800">{wo.numero}</span>
                     </div>
                     <button
-                      className="text-purple-600 hover:text-purple-800 p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                      className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-white/50 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         carregarWOHistorico(wo.numero);
@@ -658,7 +698,7 @@ const WorkOrderAllocation = () => {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <IconComponent size={20} className={estadoCores.text} />
-                      <h3 className="font-medium">WO #{searchResult.wo}</h3>
+                      <h3 className="font-medium">{searchResult.wo}</h3>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       searchResult.estadoIntervencao.toLowerCase().includes("realizado") || searchResult.estadoIntervencao.toLowerCase().includes("faturado")
@@ -677,124 +717,159 @@ const WorkOrderAllocation = () => {
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Coluna 1 */}
-                <div>
+                <div className="space-y-4">
                   {/* SLID */}
-                  <div className="mb-6">
-                    <h3 className="text-xs text-gray-500 mb-1">SLID</h3>
-                    <div className="flex items-start gap-2">
-                      <p className="text-gray-800 font-medium flex-1">{searchResult.slid || "N/A"}</p>
-                      <button
-                        className={`text-purple-600 p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
-                        onClick={() => handleCopyToClipboard(searchResult.slid || "N/A", 'slid')}
-                        title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
-                      >
-                        <Clipboard size={16} />
-                      </button>
+                  {temValor(searchResult.slid) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">SLID</h3>
+                      <div className="flex items-start gap-2">
+                        <p className="text-gray-800 font-medium flex-1">{searchResult.slid}</p>
+                        <button
+                          className={`text-blue-600 p-1 hover:bg-blue-50 rounded-full transition ${copiedField === 'slid' ? 'bg-green-50 text-green-500' : ''}`}
+                          onClick={() => handleCopyToClipboard(searchResult.slid, 'slid')}
+                          title={copiedField === 'slid' ? 'Copiado!' : 'Copiar SLID'}
+                        >
+                          <Clipboard size={16} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Fibra */}
-                  <div className="mb-6">
-                    <h3 className="text-xs text-gray-500 mb-1">Fibra</h3>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: determinarCorFibra(searchResult.corFibra, searchResult.corFibraHex).hex }}
-                      ></div>
-                      <p className="text-gray-800">{searchResult.corFibra}</p>
+                  {temValor(searchResult.corFibra) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Fibra</h3>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: determinarCorFibra(searchResult.corFibra, searchResult.corFibraHex).hex }}
+                        ></div>
+                        <p className="text-gray-800">{searchResult.corFibra}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
-                  {/* Dona de Rede (movido para depois de Fibra) */}
-                  <div className="mb-6">
-                    <h3 className="text-xs text-gray-500 mb-1">Dona de Rede</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.donaRede}</p>
-                  </div>
+                  {/* Porto Primário (movido para depois de Fibra) */}
+                  {temValor(searchResult.portoEntrada) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Porto Primário</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.portoEntrada}</p>
+                    </div>
+                  )}
+                  
+                  {/* Dona de Rede (movido para depois de Porto) */}
+                  {temValor(searchResult.donaRede) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Dona de Rede</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.donaRede}</p>
+                    </div>
+                  )}
                   
                   {/* Morada em duas linhas */}
-                  <div className="mb-2">
-                    <h3 className="text-xs text-gray-500 mb-1">Morada</h3>
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1">
-                        <p className="text-gray-800">
-                          {searchResult.morada.linha1 || (typeof searchResult.morada === 'string' ? searchResult.morada : 'N/A')}
-                        </p>
-                        {searchResult.morada.linha2 && (
-                          <p className="text-gray-800 text-sm">{searchResult.morada.linha2}</p>
-                        )}
+                  {(temValor(searchResult.morada.linha1) || temValor(searchResult.morada.linha2)) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Morada</h3>
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          {temValor(searchResult.morada.linha1) && (
+                            <p className="text-gray-800">
+                              {searchResult.morada.linha1}
+                            </p>
+                          )}
+                          {temValor(searchResult.morada.linha2) && (
+                            <p className="text-gray-800 text-sm">{searchResult.morada.linha2}</p>
+                          )}
+                        </div>
+                        <button
+                          className={`text-blue-600 p-1 hover:bg-blue-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
+                          onClick={() => handleCopyToClipboard(
+                            typeof searchResult.morada === 'object'
+                              ? `${searchResult.morada.linha1}${searchResult.morada.linha2 ? '\n' + searchResult.morada.linha2 : ''}`
+                              : searchResult.morada,
+                            'morada'
+                          )}
+                          title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
+                        >
+                          <Clipboard size={16} />
+                        </button>
                       </div>
-                      <button
-                        className={`text-purple-600 p-1 hover:bg-purple-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
-                        onClick={() => handleCopyToClipboard(
-                          typeof searchResult.morada === 'object'
-                            ? `${searchResult.morada.linha1}${searchResult.morada.linha2 ? '\n' + searchResult.morada.linha2 : ''}`
-                            : searchResult.morada,
-                          'morada'
-                        )}
-                        title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
-                      >
-                        <Clipboard size={16} />
-                      </button>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Botão de mapa logo abaixo da morada */}
-                  <div className="mb-6">
-                    <button
-                      className="flex items-center gap-2 text-purple-600 hover:underline mt-2"
-                      onClick={abrirMapa}
-                    >
-                      <MapPin size={18} />
-                      <span>Ver no mapa</span>
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
+                  {(temValor(searchResult.morada.linha1) || temValor(searchResult.morada.linha2) || 
+                    (searchResult.coordenadas && (searchResult.coordenadas.lat || searchResult.coordenadas.lng))) && (
+                    <div>
+                      <button
+                        className="flex items-center gap-2 text-blue-600 hover:underline"
+                        onClick={abrirMapa}
+                      >
+                        <MapPin size={18} />
+                        <span>Ver no mapa</span>
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  )}
                   
                   {/* Acesso */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Acesso</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.acesso}</p>
-                  </div>
+                  {temValor(searchResult.acesso) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Acesso</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.acesso}</p>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Coluna 2 */}
-                <div>
+                <div className="space-y-4">
                   {/* Nº de Box */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Nº de Box</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.numBox}</p>
-                  </div>
+                  {temValor(searchResult.numBox) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Nº de Box</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.numBox}</p>
+                    </div>
+                  )}
                   
                   {/* Tipo de Box */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Tipo de Box</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.tipoBox}</p>
-                  </div>
+                  {temValor(searchResult.tipoBox) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Tipo de Box</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.tipoBox}</p>
+                    </div>
+                  )}
                   
                   {/* Instalar Telefone? */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Instalar Telefone?</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.telefone}</p>
-                  </div>
+                  {temValor(searchResult.telefone) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Instalar Telefone?</h3>
+                      <p className="text-gray-800 font-medium">{searchResult.telefone}</p>
+                    </div>
+                  )}
                   
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Data de Agendamento</h3>
-                    <p className="text-gray-800">{searchResult.dataAgendamento}</p>
-                  </div>
-                  
-                  {/* Porto Primário */}
-                  <div className="mb-4">
-                    <h3 className="text-xs text-gray-500 mb-1">Porto Primário</h3>
-                    <p className="text-gray-800 font-medium">{searchResult.portoEntrada}</p>
-                  </div>
+                  {/* Data de Agendamento */}
+                  {temValor(searchResult.dataAgendamento) && (
+                    <div>
+                      <h3 className="text-xs text-gray-500 mb-1">Data de Agendamento</h3>
+                      <p className="text-gray-800">{searchResult.dataAgendamento}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
-              {/* Botões de ação - Apenas Nova Busca */}
-              <div className="mt-6 flex justify-center">
+              {/* Botões de ação - Nova Busca e Voltar */}
+              <div className="mt-6 flex justify-center gap-4">
                 <button
-                  className="w-full md:w-1/2 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
-                  onClick={() => setSearchResult(null)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition"
+                  onClick={voltarParaHistorico}
+                >
+                  Voltar
+                </button>
+                <button
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+                  onClick={() => {
+                    setSearchResult(null);
+                    setWorkOrderNumber("");
+                  }}
                 >
                   Nova Busca
                 </button>
