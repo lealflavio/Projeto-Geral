@@ -395,12 +395,8 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-        fix-allocation-robustness
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
-      
       const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
-        master
-      
+             
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
       
