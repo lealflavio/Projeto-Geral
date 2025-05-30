@@ -272,7 +272,7 @@ const WorkOrderAllocation = () => {
     };
   }, [progressInterval]);
 
-  // Log da configuração em ambiente de desenvolvimento
+  // Log da configuração em ambiente de desenvolvimento e inicialização da página
   useEffect(() => {
     logDebug("API Base URL configurada:", API_BASE_URL);
     logDebug("Ambiente:", import.meta.env.MODE);
@@ -282,8 +282,19 @@ const WorkOrderAllocation = () => {
       const historico = obterHistoricoWOs(user.id);
       setHistoricoWOs(historico);
       logDebug("Histórico de WOs carregado:", historico);
+      
+      // Verificar se há uma WO em cache recente para carregar automaticamente
+      const ultimaWO = historico[0]?.numero;
+      if (ultimaWO) {
+        setWorkOrderNumber(ultimaWO);
+        // Simular um pequeno atraso para garantir que a interface esteja pronta
+        setTimeout(() => {
+          logDebug("Carregando automaticamente a última WO:", ultimaWO);
+          handleSubmit();
+        }, 500);
+      }
     }
-  }, [user?.id]);
+  }, [user?.id, authToken]);
 
   // Efeito para controlar a visibilidade do histórico
   useEffect(() => {
@@ -395,7 +406,7 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
              
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
@@ -519,8 +530,13 @@ const WorkOrderAllocation = () => {
           tecnico: user?.name || "Técnico"
         };
         
+        // Limpar qualquer erro anterior quando dados são carregados com sucesso
+        setError(null);
         setWorkOrderData(data);
         setSearchResult(resultado);
+        
+        // Resetar contador de tentativas após sucesso
+        setTentativas(0);
         
         // Salvar no cache específico do usuário
         if (user?.id) {
@@ -528,10 +544,17 @@ const WorkOrderAllocation = () => {
           // Atualizar histórico
           setHistoricoWOs(obterHistoricoWOs(user.id));
         }
-        fix-allocation-robustness
       
       } else {
-        // Usar dados simulados para demonstração (apenas se não houver dados reais)
+        // Verificar se há dados disponíveis
+        if (!data || !Object.keys(data).length) {
+          setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
+          toast.warning(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
+          setProgress(100);
+          return;
+        }
+        
+        // Usar dados simulados para demonstração apenas se necessário
         const mockResult = {
           wo: workOrderNumber,
           slid: "CAKIBALE",
@@ -559,15 +582,18 @@ const WorkOrderAllocation = () => {
           estadoIntervencao: "Em Progresso"
         };
         
+        // Limpar qualquer erro anterior
+        setError(null);
         setWorkOrderData(data);
         setSearchResult(mockResult);
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
         
-        // Verificar se há dados disponíveis
-        if (!data || !Object.keys(data).length) {
-          setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
+        // Salvar no cache do usuário para acesso rápido futuro
+        if (user?.id) {
+          salvarWOCache(mockResult, user.id);
+          setHistoricoWOs(obterHistoricoWOs(user.id));
         }
       }
       
@@ -586,16 +612,19 @@ const WorkOrderAllocation = () => {
       } 
       // Verificar se é um erro de timeout
       else if (err.name === 'AbortError') {
-        // Se já tentou mais de 2 vezes e continua dando timeout, sugerir que a WO não existe
-        if (tentativaAtual > 2) {
+        // Se já tentou mais de 1 vez e continua dando timeout, sugerir que a WO não existe
+        if (tentativaAtual > 1) {
           mensagemErro = `WO ${workOrderNumber} não encontrada ou o servidor está demorando muito para responder. Verifique o número informado.`;
+          // Resetar contador de tentativas para evitar loops infinitos
+          setTentativas(0);
         } else {
-          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
+          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente.";
         }
       }
       
       setError(mensagemErro);
       setProgress(100); // Completar a barra mesmo em caso de erro
+      toast.error(mensagemErro); // Mostrar toast para feedback visual imediato
     } finally {
       setIsLoading(false);
     }
