@@ -561,7 +561,7 @@ const WorkOrderAllocation = () => {
         
         setWorkOrderData(data);
         setSearchResult(mockResult);
-        master
+         
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
