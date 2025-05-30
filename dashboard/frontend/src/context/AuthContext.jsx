@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 // Criar o contexto de autenticação
 const AuthContext = createContext();
@@ -27,6 +27,33 @@ export const AuthProvider = ({ children }) => {
       role: 'technician'
     };
   });
+  
+  // Efeito para sincronizar o contexto com o localStorage
+  useEffect(() => {
+    // Função para verificar e atualizar o token do localStorage
+    const checkAuthToken = () => {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken !== authToken) {
+        setAuthToken(storedToken);
+      }
+      
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (JSON.stringify(parsedUser) !== JSON.stringify(user)) {
+          setUser(parsedUser);
+        }
+      }
+    };
+    
+    // Verificar imediatamente ao montar o componente
+    checkAuthToken();
+    
+    // Opcional: verificar periodicamente para sincronização
+    const interval = setInterval(checkAuthToken, 2000);
+    
+    return () => clearInterval(interval);
+  }, [authToken, user]);
 
   // Função para login
   const login = (token, userData) => {
