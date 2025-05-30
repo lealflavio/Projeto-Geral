@@ -805,7 +805,7 @@ const WorkOrderAllocation = () => {
 
   return (
     <div className="p-4 md:p-6">
-     // <h1 className="text-xl font-semibold text-gray-800 mb-4">Buscar WO</h1>
+     {/* <h1 className="text-xl font-semibold text-gray-800 mb-4">Buscar WO</h1>*/}
       
       {/* Formulário de busca */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
