@@ -1064,10 +1064,8 @@ const WorkOrderAllocation = () => {
                         </button>
                       </div>
                     </div>
-                  )}         )}
-                          title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
-                        >
-                          <Clipboard size={16} />
+                  )}         
+                          
                         </button>
                       </div>
                     </div>
@@ -1123,7 +1121,7 @@ const WorkOrderAllocation = () => {
                         {searchResult.telefone.toLowerCase() === "sim" ? "Sim" : "Não"}
                       </p>
                     </div>
-                  )}}
+                  )}
                               {/* Data de Agendamento - sem segundos */}
                   {temValor(searchResult.dataAgendamento) && (
                     <div>
