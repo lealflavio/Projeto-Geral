@@ -468,7 +468,7 @@ const WorkOrderAllocation = () => {
       toast.error("Sessão expirada. Por favor, faça login novamente");
       setError("Sessão expirada. Por favor, faça login novamente");
       return;
-    }}
+    }
     
     // Verificar se a WO está no cache do usuário atual
     if (user?.id) {
