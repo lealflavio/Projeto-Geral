@@ -17,7 +17,7 @@ const Sidebar = ({ open, setOpen }) => {
   const links = [
     { name: "Início", icon: <Home size={20} />, path: "/dashboard" },
     { name: "Créditos", icon: <DollarSign size={20} />, path: "/creditos" },
-    { name: "Alocar WO", icon: <List size={20} />, path: "/alocar-wo" },
+    { name: "Buscar WO", icon: <List size={20} />, path: "/alocar-wo" },
     { name: "Estimativa de Ganhos", icon: <BarChart size={20} />, path: "/estimativa-ganhos" },    
     { name: "Minhas WOs", icon: <List size={20} />, path: "/wos" },
     { name: "Mapa de KMs", icon: <Navigation size={20} />, path: "/mapa-kms" },
