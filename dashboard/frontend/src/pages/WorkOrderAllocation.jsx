@@ -1064,11 +1064,6 @@ const WorkOrderAllocation = () => {
                         </button>
                       </div>
                     </div>
-                  )}         
-                          
-                        </button>
-                      </div>
-                    </div>
                   )}
                   
                   {/* Botão de mapa logo abaixo da morada */}
@@ -1145,7 +1140,8 @@ const WorkOrderAllocation = () => {
                         })()}
                       </p>
                     </div>
-                  )}            </div>
+                  )}
+                </div>
               </div>
               
               {/* Botões de ação - Nova Busca e Voltar */}
