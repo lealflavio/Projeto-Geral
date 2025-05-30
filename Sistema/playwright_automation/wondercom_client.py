@@ -213,15 +213,18 @@ class WondercomClient:
             parsed_selector = await self._parse_selenium_selector(search_button_selector)
             await self.page.click(parsed_selector)
             
-            # Esperar pelos resultados
-            await wait_for_network_idle(self.page)
+            # Esperar pelos resultados - aumentar timeout para rede
+            await wait_for_network_idle(self.page, timeout=15000)  # 15 segundos
             
-            # Buscar a linha da WO
-            row_selector = f"xpath=//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
+            # Aguardar um pouco para garantir que a tabela foi carregada
+            await asyncio.sleep(2)
+            
+            # Buscar a linha da WO - usando XPath exato do Selenium
+            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
             
             try:
                 # Esperar pela linha com timeout adaptativo
-                row_element = await self._find_element(row_selector, 
+                row_element = await self.page.wait_for_selector(row_xpath, 
                                                     timeout=self.adaptive_wait.get_timeout())
                 
                 if not row_element:
@@ -229,7 +232,7 @@ class WondercomClient:
                     return None
                     
                 # Extrair estado da WO
-                estado_wo = await self.extract_wo_state(row_selector)
+                estado_wo = await self.extract_wo_state(work_order_id)
                 
                 # Ajustar timeout após sucesso
                 self.adaptive_wait.adjust_timeout(True)
@@ -250,14 +253,14 @@ class WondercomClient:
             logger.error(f"Erro ao buscar WO {work_order_id}: {e}")
             return None
     
-    async def extract_wo_state(self, row_selector):
+    async def extract_wo_state(self, work_order_id):
         """Extrai o estado da WO da linha de resultado."""
         try:
-            # Converter seletor para formato Playwright
-            parsed_selector = await self._parse_selenium_selector(row_selector)
+            # Usar XPath exato do Selenium
+            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
             
-            # Implementação para extrair o estado da linha
-            cells = await self.page.query_selector_all(f"{parsed_selector} td")
+            # Encontrar todas as células da linha
+            cells = await self.page.query_selector_all(f"{row_xpath}/td")
             
             for cell in cells:
                 text = await cell.text_content()
@@ -281,7 +284,7 @@ class WondercomClient:
             
             # Extrair morada
             try:
-                morada_element = await self._find_element("xpath=//div[contains(@class, 'v-label') and contains(text(), 'Morada:')]")
+                morada_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Morada:')]")
                 if morada_element:
                     parent = await morada_element.evaluate("el => el.parentElement")
                     morada_text = await self.page.evaluate("el => el.textContent", parent)
@@ -292,7 +295,7 @@ class WondercomClient:
             
             # Extrair SLID (PDO)
             try:
-                slid_element = await self._find_element("xpath=//div[contains(@class, 'v-label') and contains(text(), 'SLID:')]")
+                slid_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'SLID:')]")
                 if slid_element:
                     parent = await slid_element.evaluate("el => el.parentElement")
                     slid_text = await self.page.evaluate("el => el.textContent", parent)
@@ -303,7 +306,7 @@ class WondercomClient:
             
             # Extrair fibra
             try:
-                fibra_element = await self._find_element("xpath=//div[contains(@class, 'v-label') and contains(text(), 'Fibra:')]")
+                fibra_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Fibra:')]")
                 if fibra_element:
                     parent = await fibra_element.evaluate("el => el.parentElement")
                     fibra_text = await self.page.evaluate("el => el.textContent", parent)
@@ -314,7 +317,7 @@ class WondercomClient:
             
             # Extrair coordenadas da descrição
             try:
-                descricao_element = await self._find_element("xpath=//div[contains(@class, 'v-label') and contains(text(), 'Descrição:')]")
+                descricao_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Descrição:')]")
                 if descricao_element:
                     parent = await descricao_element.evaluate("el => el.parentElement")
                     descricao_text = await self.page.evaluate("el => el.textContent", parent)
@@ -377,20 +380,31 @@ class WondercomClient:
             if estado_wo == "IN PROGRESS":
                 logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
                 
-                # Clicar na linha da WO
-                row_selector = f"xpath=//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
-                row_element = await self._find_element(row_selector)
+                # Clicar na linha da WO - usando exatamente a mesma lógica do Selenium
+                row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
+                
+                # Primeiro clique normal para selecionar a linha
+                await self.page.click(row_xpath)
+                logger.info(f"Clique normal na linha da WO {work_order_id}")
+                
+                # Aguardar um pouco para garantir que a linha foi selecionada
+                await asyncio.sleep(1)
+                
+                # Clicar com botão direito para abrir menu de contexto
+                row_element = await self.page.query_selector(row_xpath)
                 if not row_element:
                     return {
                         "success": False,
-                        "message": f"Não foi possível encontrar a linha da WO {work_order_id}.",
+                        "message": f"Não foi possível encontrar a linha da WO {work_order_id} para clique com botão direito.",
                         "dados": dados_wo
                     }
                 
-                await row_element.click()
+                # Clique com botão direito
+                await row_element.click(button="right")
+                logger.info(f"Clique com botão direito na linha da WO {work_order_id}")
                 
-                # Clicar com botão direito para abrir menu de contexto
-                await self.clicar_com_botao_direito(row_selector)
+                # Aguardar um pouco para o menu de contexto aparecer
+                await asyncio.sleep(1)
                 
                 if await self.clicar_por_texto("Avançar Auto-Alocacao"):
                     if await self.clicar_por_texto("Evoluir WorkOrder"):
@@ -404,7 +418,7 @@ class WondercomClient:
                                 logger.warning("ATENÇÃO: Não foi possível clicar no botão 'Ok' da janela de informação.")
                             
                             # Espera adaptativa
-                            await wait_for_network_idle(self.page)
+                            await wait_for_network_idle(self.page, timeout=15000)
                             
                             # Busca dados atualizados
                             dados_atualizados = await self.search_work_order(work_order_id)
@@ -423,20 +437,31 @@ class WondercomClient:
             # Lógica para outros estados
             logger.info(f"Tentando alocar WO {work_order_id} do estado {estado_wo}")
             
-            # Clicar na linha da WO
-            row_selector = f"xpath=//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
-            row_element = await self._find_element(row_selector)
+            # Clicar na linha da WO - usando exatamente a mesma lógica do Selenium
+            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
+            
+            # Primeiro clique normal para selecionar a linha
+            await self.page.click(row_xpath)
+            logger.info(f"Clique normal na linha da WO {work_order_id}")
+            
+            # Aguardar um pouco para garantir que a linha foi selecionada
+            await asyncio.sleep(1)
+            
+            # Clicar com botão direito para abrir menu de contexto
+            row_element = await self.page.query_selector(row_xpath)
             if not row_element:
                 return {
                     "success": False,
-                    "message": f"Não foi possível encontrar a linha da WO {work_order_id}.",
+                    "message": f"Não foi possível encontrar a linha da WO {work_order_id} para clique com botão direito.",
                     "dados": dados_wo
                 }
             
-            await row_element.click()
+            # Clique com botão direito
+            await row_element.click(button="right")
+            logger.info(f"Clique com botão direito na linha da WO {work_order_id}")
             
-            # Clicar com botão direito para abrir menu de contexto
-            await self.clicar_com_botao_direito(row_selector)
+            # Aguardar um pouco para o menu de contexto aparecer
+            await asyncio.sleep(1)
             
             if await self.clicar_por_texto("Avançar"):
                 # Espera adaptativa
@@ -473,15 +498,11 @@ class WondercomClient:
             
         try:
             # Usar seletor do Selenium
-            selector = f"xpath=//span[contains(@class, 'v-button-caption') and contains(text(), '{texto}')]/parent::div[contains(@class, 'v-button')]"
+            xpath = f"//span[contains(@class, 'v-button-caption') and contains(text(), '{texto}')]/parent::div[contains(@class, 'v-button')]"
             
             # Esperar pelo elemento e clicar
-            element = await self._find_element(selector, timeout=timeout)
-            if not element:
-                logger.error(f"Botão com texto '{texto}' não encontrado")
-                return False
-                
-            await element.click()
+            await self.page.wait_for_selector(xpath, timeout=timeout)
+            await self.page.click(xpath)
             
             # Ajustar timeout após sucesso
             self.adaptive_wait.adjust_timeout(True)
@@ -496,22 +517,6 @@ class WondercomClient:
             self.page.set_default_timeout(self.adaptive_wait.get_timeout())
             
             logger.error(f"Erro ao tentar clicar no botão com texto '{texto}': {e}")
-            return False
-    
-    async def clicar_com_botao_direito(self, selector):
-        """Clica com o botão direito em um elemento."""
-        try:
-            parsed_selector = await self._parse_selenium_selector(selector)
-            element = await self.page.query_selector(parsed_selector)
-            if not element:
-                logger.error(f"Elemento não encontrado para clique com botão direito: {selector}")
-                return False
-                
-            await element.click(button="right")
-            logger.info(f"Clique com botão direito realizado em: {selector}")
-            return True
-        except Exception as e:
-            logger.error(f"Erro ao clicar com botão direito em {selector}: {e}")
             return False
     
     def cor_para_hex(self, nome_cor):
