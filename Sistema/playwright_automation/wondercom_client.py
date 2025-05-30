@@ -1,12 +1,17 @@
 """
 Cliente Playwright para automação do Portal Wondercom.
-Substitui a implementação Selenium existente.
+Usando exatamente os mesmos seletores do Selenium para garantir compatibilidade.
 """
 import asyncio
 import logging
 import re
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Locator
 from bs4 import BeautifulSoup
+import sys
+import os
+
+# Adicionar diretório pai ao path para importações
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.selectors import Selectors
 from utils.wait_strategies import AdaptiveWait, retry_async, wait_for_network_idle
 import config
@@ -75,25 +80,82 @@ class WondercomClient:
             await self.playwright.stop()
             self.playwright = None
     
+    async def _parse_selector(self, selector):
+        """
+        Converte seletores no formato Selenium para o formato Playwright.
+        Exemplo: "id=login" -> "#login"
+                "xpath=//div[@id='test']" -> "//div[@id='test']"
+                "css=input[type='submit']" -> "input[type='submit']"
+        """
+        if selector.startswith("id="):
+            return f"#{selector[3:]}"
+        elif selector.startswith("xpath="):
+            return selector[6:]
+        elif selector.startswith("css="):
+            return selector[4:]
+        return selector
+    
+    async def _find_element(self, selector, timeout=None):
+        """
+        Encontra um elemento usando o seletor no formato Selenium.
+        Converte o seletor para o formato Playwright e retorna o elemento.
+        """
+        if timeout is None:
+            timeout = self.adaptive_wait.get_timeout()
+            
+        parsed_selector = await self._parse_selector(selector)
+        try:
+            element = await self.page.wait_for_selector(parsed_selector, timeout=timeout)
+            return element
+        except Exception as e:
+            logger.error(f"Erro ao encontrar elemento com seletor '{selector}': {e}")
+            return None
+    
     @retry_async(max_retries=config.MAX_RETRIES)
     async def login(self):
-        """Realiza login no portal Wondercom."""
+        """Realiza login no portal Wondercom usando exatamente os mesmos seletores do Selenium."""
         logger.info(f"Acessando o portal: {self.portal_url}")
         
         try:
             # Navegar para o portal
             await self.page.goto(self.portal_url)
             
-            # Preencher credenciais - Playwright espera automaticamente pelos elementos
-            await self.page.fill(Selectors.LOGIN_USERNAME, self.username)
-            await self.page.fill(Selectors.LOGIN_PASSWORD, self.password)
+            # Preencher credenciais - usando os seletores do Selenium
+            username_element = await self._find_element(Selectors.LOGIN_USERNAME)
+            password_element = await self._find_element(Selectors.LOGIN_PASSWORD)
+            
+            if not username_element or not password_element:
+                logger.error("Não foi possível encontrar os campos de login")
+                return False
+                
+            await username_element.fill(self.username)
+            await password_element.fill(self.password)
             
             # Clicar no botão de login
-            await self.page.click(Selectors.LOGIN_BUTTON)
+            login_button = await self._find_element(Selectors.LOGIN_BUTTON)
+            if not login_button:
+                logger.error("Não foi possível encontrar o botão de login")
+                return False
+                
+            await login_button.click()
             
-            # Esperar pela página de pesquisa
-            await self.page.wait_for_selector(Selectors.SEARCH_PAGE_INDICATOR, 
-                                             timeout=self.adaptive_wait.get_timeout())
+            # Esperar pela página de pesquisa - usando o seletor do Selenium
+            try:
+                await self._find_element(Selectors.SEARCH_PAGE_INDICATOR, timeout=self.adaptive_wait.get_timeout())
+                logger.info("Página de pesquisa encontrada pelo indicador")
+            except Exception:
+                # Se falhar, verifica se já estamos na página correta pelo título
+                try:
+                    await self.page.wait_for_function(
+                        "document.title.includes('Pesquisa de Intervenções')",
+                        timeout=self.adaptive_wait.get_timeout()
+                    )
+                    logger.info("Página de pesquisa encontrada pelo título")
+                except Exception as e:
+                    logger.error(f"Não foi possível encontrar a página de pesquisa: {e}")
+                    # Capturar screenshot para diagnóstico
+                    await self.page.screenshot(path="login_error.png")
+                    return False
             
             # Ajustar timeout após sucesso
             self.adaptive_wait.adjust_timeout(True)
@@ -108,21 +170,35 @@ class WondercomClient:
             self.page.set_default_timeout(self.adaptive_wait.get_timeout())
             
             logger.error(f"Erro ao realizar login: {e}")
+            # Capturar screenshot para diagnóstico
+            try:
+                await self.page.screenshot(path="login_error.png")
+            except:
+                pass
             return False
     
     @retry_async(max_retries=config.MAX_RETRIES)
     async def search_work_order(self, work_order_id):
-        """Busca uma ordem de trabalho pelo ID."""
+        """Busca uma ordem de trabalho pelo ID usando os seletores do Selenium."""
         try:
             # Esperar pelo campo de busca
-            await self.page.wait_for_selector(Selectors.SEARCH_FIELD, 
-                                             timeout=self.adaptive_wait.get_timeout())
+            search_field = await self._find_element(Selectors.SEARCH_FIELD, timeout=self.adaptive_wait.get_timeout())
             
+            if not search_field:
+                logger.error("Campo de busca não encontrado")
+                return None
+                
             # Limpar campo e preencher
-            await self.page.fill(Selectors.SEARCH_FIELD, work_order_id)
+            await search_field.fill("")  # Limpar campo
+            await search_field.fill(work_order_id)
             
             # Clicar no botão de pesquisa
-            await self.page.click(Selectors.SEARCH_BUTTON)
+            search_button = await self._find_element(Selectors.SEARCH_BUTTON)
+            if not search_button:
+                logger.error("Botão de pesquisa não encontrado")
+                return None
+                
+            await search_button.click()
             
             # Esperar pelos resultados - usando networkidle para garantir que todas as requisições foram completadas
             await wait_for_network_idle(self.page)
@@ -132,9 +208,12 @@ class WondercomClient:
             
             try:
                 # Esperar pela linha com timeout adaptativo
-                await self.page.wait_for_selector(row_selector, 
-                                                timeout=self.adaptive_wait.get_timeout())
+                row_element = await self._find_element(row_selector, timeout=self.adaptive_wait.get_timeout())
                 
+                if not row_element:
+                    logger.warning(f"WO {work_order_id} não encontrada")
+                    return None
+                    
                 # Extrair estado da WO
                 estado_wo = await self.extract_wo_state(row_selector)
                 
@@ -159,17 +238,24 @@ class WondercomClient:
     
     async def extract_wo_state(self, row_selector):
         """Extrai o estado da WO da linha de resultado."""
-        # Implementação para extrair o estado da linha
-        cells = await self.page.query_selector_all(f"{row_selector} td")
-        
-        for cell in cells:
-            text = await cell.text_content()
-            text = text.strip().upper()
-            if text and (text in ["IN PROGRESS", "ALLOCATED", "JOB START", "JOB CLOSED"] or 
-                        "JOB" in text or "ALLOCATED" in text or "PROGRESS" in text or "CLOSED" in text):
-                return text
-        
-        return None
+        try:
+            # Converter seletor para formato Playwright
+            parsed_selector = await self._parse_selector(row_selector)
+            
+            # Implementação para extrair o estado da linha
+            cells = await self.page.query_selector_all(f"{parsed_selector} td")
+            
+            for cell in cells:
+                text = await cell.text_content()
+                text = text.strip().upper()
+                if text and (text in ["IN PROGRESS", "ALLOCATED", "JOB START", "JOB CLOSED"] or 
+                            "JOB" in text or "ALLOCATED" in text or "PROGRESS" in text or "CLOSED" in text):
+                    return text
+            
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao extrair estado da WO: {e}")
+            return None
     
     async def extract_work_order_details(self, work_order_id, estado_wo):
         """Extrai detalhes completos da ordem de trabalho."""
@@ -179,16 +265,42 @@ class WondercomClient:
                 "estado": estado_wo
             }
             
+            # Extrair morada
+            try:
+                morada_element = await self._find_element(Selectors.MORADA_LABEL)
+                if morada_element:
+                    parent = await morada_element.evaluate("el => el.parentElement")
+                    morada_text = await self.page.evaluate("el => el.textContent", parent)
+                    morada = morada_text.replace("Morada:", "").strip()
+                    dados_wo["morada"] = morada
+            except Exception as e:
+                logger.warning(f"Erro ao extrair morada: {e}")
+            
+            # Extrair SLID (PDO)
+            try:
+                slid_element = await self._find_element(Selectors.SLID_LABEL)
+                if slid_element:
+                    parent = await slid_element.evaluate("el => el.parentElement")
+                    slid_text = await self.page.evaluate("el => el.textContent", parent)
+                    slid = slid_text.replace("SLID:", "").strip()
+                    dados_wo["slid"] = slid
+            except Exception as e:
+                logger.warning(f"Erro ao extrair SLID: {e}")
+            
+            # Extrair fibra
+            try:
+                fibra_element = await self._find_element(Selectors.FIBRA_LABEL)
+                if fibra_element:
+                    parent = await fibra_element.evaluate("el => el.parentElement")
+                    fibra_text = await self.page.evaluate("el => el.textContent", parent)
+                    fibra = fibra_text.replace("Fibra:", "").strip()
+                    dados_wo["fibra"] = fibra
+            except Exception as e:
+                logger.warning(f"Erro ao extrair fibra: {e}")
+            
             # Extrair HTML para processamento com BeautifulSoup
             html_content = await self.page.content()
             soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Extrair morada (exemplo)
-            morada_elements = soup.select("div.v-label:contains('Morada')")
-            if morada_elements:
-                parent = morada_elements[0].parent
-                morada = parent.get_text().replace("Morada:", "").strip()
-                dados_wo["morada"] = morada
             
             # Extrair coordenadas da descrição
             descricao = dados_wo.get("descricao", "")
@@ -246,6 +358,21 @@ class WondercomClient:
             if estado_wo == "IN PROGRESS":
                 logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
                 
+                # Clicar na linha da WO
+                row_selector = Selectors.get_wo_row_selector(work_order_id)
+                row_element = await self._find_element(row_selector)
+                if not row_element:
+                    return {
+                        "success": False,
+                        "message": f"Não foi possível encontrar a linha da WO {work_order_id}.",
+                        "dados": dados_wo
+                    }
+                
+                await row_element.click()
+                
+                # Clicar com botão direito para abrir menu de contexto
+                await self.clicar_com_botao_direito(row_selector)
+                
                 if await self.clicar_por_texto("Avançar Auto-Alocacao"):
                     if await self.clicar_por_texto("Evoluir WorkOrder"):
                         if await self.clicar_por_texto("Sim"):
@@ -276,6 +403,21 @@ class WondercomClient:
             
             # Lógica para outros estados
             logger.info(f"Tentando alocar WO {work_order_id} do estado {estado_wo}")
+            
+            # Clicar na linha da WO
+            row_selector = Selectors.get_wo_row_selector(work_order_id)
+            row_element = await self._find_element(row_selector)
+            if not row_element:
+                return {
+                    "success": False,
+                    "message": f"Não foi possível encontrar a linha da WO {work_order_id}.",
+                    "dados": dados_wo
+                }
+            
+            await row_element.click()
+            
+            # Clicar com botão direito para abrir menu de contexto
+            await self.clicar_com_botao_direito(row_selector)
             
             if await self.clicar_por_texto("Avançar"):
                 # Espera adaptativa
@@ -311,12 +453,16 @@ class WondercomClient:
             timeout = self.adaptive_wait.get_timeout()
             
         try:
-            # Usar seletor XPath similar ao original, mas com sintaxe do Playwright
+            # Usar seletor do Selenium
             selector = Selectors.get_button_by_text_selector(texto)
             
             # Esperar pelo elemento e clicar
-            await self.page.wait_for_selector(selector, timeout=timeout)
-            await self.page.click(selector)
+            element = await self._find_element(selector, timeout=timeout)
+            if not element:
+                logger.error(f"Botão com texto '{texto}' não encontrado")
+                return False
+                
+            await element.click()
             
             # Ajustar timeout após sucesso
             self.adaptive_wait.adjust_timeout(True)
@@ -336,7 +482,13 @@ class WondercomClient:
     async def clicar_com_botao_direito(self, selector):
         """Clica com o botão direito em um elemento."""
         try:
-            await self.page.click(selector, button="right")
+            parsed_selector = await self._parse_selector(selector)
+            element = await self.page.query_selector(parsed_selector)
+            if not element:
+                logger.error(f"Elemento não encontrado para clique com botão direito: {selector}")
+                return False
+                
+            await element.click(button="right")
             logger.info(f"Clique com botão direito realizado em: {selector}")
             return True
         except Exception as e:

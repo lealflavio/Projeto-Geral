@@ -1,5 +1,6 @@
 """
 Teste básico de login no portal Wondercom usando Playwright.
+Usando exatamente os mesmos seletores do Selenium para garantir compatibilidade.
 """
 import asyncio
 import logging
