@@ -355,10 +355,11 @@ const WorkOrderAllocation = () => {
       return;
     }
     
-    // Verificar se as credenciais do portal estão configuradas
-    if (!user?.usuario_portal || !user?.senha_portal) {
-      toast.error("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
-      setError("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
+    // Verificar se o usuário do portal está configurado (apenas usuário é obrigatório)
+    // A senha pode estar armazenada apenas no backend para contas já integradas
+    if (!user?.usuario_portal) {
+      toast.error("Usuário do portal não configurado. Por favor, configure na página de Perfil.");
+      setError("Usuário do portal não configurado. Por favor, configure na página de Perfil.");
       // Redirecionar para a página de perfil após 3 segundos
       setTimeout(() => {
         navigate("/perfil");
