@@ -395,7 +395,11 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
+        fix-allocation-robustness
       const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
+      
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
+        master
       
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
@@ -528,6 +532,40 @@ const WorkOrderAllocation = () => {
           // Atualizar histórico
           setHistoricoWOs(obterHistoricoWOs(user.id));
         }
+        fix-allocation-robustness
+      
+      } else {
+        // Usar dados simulados para demonstração (apenas se não houver dados reais)
+        const mockResult = {
+          wo: workOrderNumber,
+          slid: "CAKIBALE",
+          corFibra: "Azul",
+          corFibraHex: "#1E90FF",
+          morada: {
+            linha1: "Rua das Flores, 123",
+            linha2: "3000-050 Lisboa"
+          },
+          acesso: "188067988",
+          numBox: "1",
+          tipoBox: "Smart",
+          telefone: "Sim",
+          dataAgendamento: "28/05/2025",
+          status: "Alocado",
+          tipoInstalacao: "Instalacao FTTH",
+          tecnico: user?.name || "Técnico",
+          endereco: "Rua das Flores, 123\n3000-050 Lisboa",
+          coordenadas: {
+            lat: 38.7223,
+            lng: -9.1393
+          },
+          donaRede: "NOS",
+          portoEntrada: "Porto 5",
+          estadoIntervencao: "Em Progresso"
+        };
+        
+        setWorkOrderData(data);
+        setSearchResult(mockResult);
+        master
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
