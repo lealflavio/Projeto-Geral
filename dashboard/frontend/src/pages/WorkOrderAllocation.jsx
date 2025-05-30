@@ -561,13 +561,14 @@ const WorkOrderAllocation = () => {
         
         setWorkOrderData(data);
         setSearchResult(mockResult);
-         
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
-      } else {
-        // Se a resposta for success mas não tiver dados, tratar como WO não encontrada
-        setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
+        
+        // Verificar se há dados disponíveis
+        if (!data || !Object.keys(data).length) {
+          setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
+        }
       }
       
       setProgress(100); // Garantir que a barra esteja completa
