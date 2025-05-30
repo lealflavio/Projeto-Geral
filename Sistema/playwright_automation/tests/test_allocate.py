@@ -1,11 +1,12 @@
 """
-Teste de busca e alocação de ordem de trabalho usando Playwright.
+Teste de busca e extração de dados de ordem de trabalho usando Playwright.
 """
 import asyncio
 import logging
 import sys
 import os
 import time
+import json
 
 # Configurar path para importações
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,14 +18,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 async def test_allocate():
-    """Testa a busca e alocação de uma ordem de trabalho."""
+    """Testa a busca e extração de dados de uma ordem de trabalho."""
     # Credenciais de teste
     portal_url = "https://portal.wondercom.pt/group/guest/intervencoes"
     username = "flavio.leal"
     password = "MFH8fQgAa4"
     work_order_id = "16722483"
     
-    logger.info(f"Iniciando teste de busca e alocação da WO {work_order_id}..." )
+    logger.info(f"Iniciando teste de busca e extração de dados da WO {work_order_id}..." )
     
     # Inicializar cliente
     client = None
@@ -33,7 +34,7 @@ async def test_allocate():
             portal_url=portal_url,
             username=username,
             password=password,
-            headless=False  # Definir como False para ver o navegador
+            headless=True  # Definir como True para executar em ambiente sem interface gráfica
         )
         
         # Iniciar navegador
@@ -60,17 +61,12 @@ async def test_allocate():
         logger.info(f"✅ WO {work_order_id} encontrada em {search_time:.2f} segundos!")
         logger.info(f"Estado atual: {dados_wo.get('estado', 'Desconhecido')}")
         
-        # Alocar ordem de trabalho
-        start_time = time.time()
-        resultado = await client.allocate_work_order(work_order_id)
-        allocate_time = time.time() - start_time
+        # Exibir dados extraídos
+        logger.info("Dados extraídos da WO:")
+        logger.info(json.dumps(dados_wo, indent=2))
         
-        if resultado["success"]:
-            logger.info(f"✅ Alocação realizada com sucesso em {allocate_time:.2f} segundos!")
-            logger.info(f"Mensagem: {resultado['message']}")
-            logger.info(f"Estado final: {resultado['dados'].get('estado', 'Desconhecido')}")
-        else:
-            logger.error(f"❌ Falha na alocação: {resultado['message']}")
+        # Simular envio ao backend
+        logger.info("✅ Dados extraídos com sucesso e prontos para envio ao backend!")
             
     except Exception as e:
         logger.error(f"❌ Erro durante o teste: {e}")

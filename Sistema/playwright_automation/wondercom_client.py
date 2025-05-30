@@ -9,6 +9,8 @@ from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 from bs4 import BeautifulSoup
 import sys
 import os
+import json
+import requests
 
 # Adicionar diretório pai ao path para importações
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -350,150 +352,97 @@ class WondercomClient:
                     dados_wo["descricao"] = descricao
                     
                     # Extrair coordenadas
-                    coord = None
-                    coord_pattern = re.compile(r'([+-]?\d{1,3}\.\d+)[,\s]+([+-]?\d{1,3}\.\d+)')
-                    
-                    for linha in descricao.splitlines():
-                        linha = linha.strip()
-                        if linha.startswith("PDO Coordenadas:"):
-                            partes = linha.split("PDO Coordenadas:")
-                            if len(partes) > 1:
-                                possiveis_coords = partes[1].strip()
-                                match = coord_pattern.match(possiveis_coords)
-                                if match:
-                                    coord = f"{match.group(1)},{match.group(2)}"
-                                    break
-                    
-                    if not coord:
-                        match = coord_pattern.search(descricao)
-                        if match:
-                            coord = f"{match.group(1)},{match.group(2)}"
-                    
-                    dados_wo["coordenadas"] = coord
+                    coord_pattern = r'Coordenadas:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)'
+                    coord_match = re.search(coord_pattern, descricao)
+                    if coord_match:
+                        dados_wo["latitude"] = coord_match.group(1)
+                        dados_wo["longitude"] = coord_match.group(2)
             except Exception as e:
                 logger.warning(f"Erro ao extrair descrição: {e}")
             
-            return dados_wo
+            # Extrair cliente
+            try:
+                cliente_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Cliente:')]")
+                if cliente_element:
+                    parent = await cliente_element.evaluate("el => el.parentElement")
+                    cliente_text = await self.page.evaluate("el => el.textContent", parent)
+                    cliente = cliente_text.replace("Cliente:", "").strip()
+                    dados_wo["cliente"] = cliente
+            except Exception as e:
+                logger.warning(f"Erro ao extrair cliente: {e}")
             
+            # Extrair contacto
+            try:
+                contacto_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Contacto:')]")
+                if contacto_element:
+                    parent = await contacto_element.evaluate("el => el.parentElement")
+                    contacto_text = await self.page.evaluate("el => el.textContent", parent)
+                    contacto = contacto_text.replace("Contacto:", "").strip()
+                    dados_wo["contacto"] = contacto
+            except Exception as e:
+                logger.warning(f"Erro ao extrair contacto: {e}")
+            
+            # Extrair tipo de serviço
+            try:
+                tipo_servico_element = await self.page.query_selector("//div[contains(@class, 'v-label') and contains(text(), 'Tipo de Serviço:')]")
+                if tipo_servico_element:
+                    parent = await tipo_servico_element.evaluate("el => el.parentElement")
+                    tipo_servico_text = await self.page.evaluate("el => el.textContent", parent)
+                    tipo_servico = tipo_servico_text.replace("Tipo de Serviço:", "").strip()
+                    dados_wo["tipo_servico"] = tipo_servico
+            except Exception as e:
+                logger.warning(f"Erro ao extrair tipo de serviço: {e}")
+            
+            # Enviar dados para o backend
+            try:
+                # URL do backend (ajustar conforme necessário)
+                backend_url = "http://localhost:5000/api/work_order_details"
+                
+                # Enviar dados via POST
+                logger.info(f"Enviando dados da WO {work_order_id} para o backend...")
+                
+                # Simulação do envio para o backend (comentar esta linha e descomentar a próxima em produção)
+                logger.info(f"Dados que seriam enviados ao backend: {json.dumps(dados_wo, indent=2)}")
+                
+                # Em produção, descomentar esta linha:
+                # response = requests.post(backend_url, json=dados_wo)
+                # logger.info(f"Resposta do backend: {response.status_code} - {response.text}")
+                
+                return dados_wo
+                
+            except Exception as e:
+                logger.error(f"Erro ao enviar dados para o backend: {e}")
+                return dados_wo
+                
         except Exception as e:
             logger.error(f"Erro ao extrair detalhes da WO: {e}")
-            return {
-                "id": work_order_id,
-                "estado": estado_wo,
-                "erro": str(e)
-            }
+            return {"id": work_order_id, "estado": estado_wo, "erro": str(e)}
     
-    @retry_async(max_retries=config.MAX_RETRIES)
     async def allocate_work_order(self, work_order_id):
-        """Aloca uma ordem de trabalho."""
+        """
+        Método mantido para compatibilidade, mas agora apenas retorna os dados extraídos
+        sem realizar a alocação da WO.
+        """
         try:
+            # Buscar dados da WO
             dados_wo = await self.search_work_order(work_order_id)
+            
             if not dados_wo:
-                return {"success": False, "message": f"WO {work_order_id} não encontrada."}
-            
-            estado_wo = dados_wo["estado"]
-            
-            # Verificar se já está no estado desejado
-            if estado_wo in ["ALLOCATED", "JOB START"]:
-                return {
-                    "success": True,
-                    "message": f"WO {work_order_id} já está no estado {estado_wo}.",
-                    "dados": dados_wo
-                }
-            
-            # Lógica para IN PROGRESS -> ALLOCATED
-            if estado_wo == "IN PROGRESS":
-                logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
-                
-                # Clicar na célula do estado para selecionar a linha
-                if hasattr(self, 'estado_cell') and self.estado_cell:
-                    # Primeiro clique normal (esquerdo)
-                    await self.estado_cell.click()
-                    logger.info(f"Clique normal na célula de estado da WO {work_order_id}")
-                    
-                    # Aguardar um pouco para garantir que a linha foi selecionada
-                    await asyncio.sleep(1)
-                    
-                    # Clique com botão direito
-                    await self.estado_cell.click(button="right")
-                    logger.info(f"Clique com botão direito na célula de estado da WO {work_order_id}")
-                    
-                    # Aguardar um pouco para o menu de contexto aparecer
-                    await asyncio.sleep(1)
-                
-                if await self.clicar_por_texto("Avançar Auto-Alocacao"):
-                    if await self.clicar_por_texto("Evoluir WorkOrder"):
-                        if await self.clicar_por_texto("Sim"):
-                            # Espera curta para processamento
-                            await asyncio.sleep(1)
-                            
-                            if await self.clicar_por_texto("Ok"):
-                                logger.info("Botão 'Ok' da janela de informação clicado com sucesso.")
-                            else:
-                                logger.warning("ATENÇÃO: Não foi possível clicar no botão 'Ok' da janela de informação.")
-                            
-                            # Espera adaptativa
-                            await wait_for_network_idle(self.page, timeout=15000)
-                            
-                            # Busca dados atualizados
-                            dados_atualizados = await self.search_work_order(work_order_id)
-                            return {
-                                "success": True,
-                                "message": f"WO {work_order_id} alocada com sucesso (IN PROGRESS -> ALLOCATED).",
-                                "dados": dados_atualizados
-                            }
-                
                 return {
                     "success": False,
-                    "message": f"Falha ao alocar WO {work_order_id} (IN PROGRESS -> ALLOCATED).",
-                    "dados": dados_wo
+                    "message": f"WO {work_order_id} não encontrada.",
+                    "dados": None
                 }
             
-            # Lógica para outros estados
-            logger.info(f"Tentando alocar WO {work_order_id} do estado {estado_wo}")
-            
-            # Clicar na célula do estado para selecionar a linha
-            if hasattr(self, 'estado_cell') and self.estado_cell:
-                # Primeiro clique normal (esquerdo)
-                await self.estado_cell.click()
-                logger.info(f"Clique normal na célula de estado da WO {work_order_id}")
-                
-                # Aguardar um pouco para garantir que a linha foi selecionada
-                await asyncio.sleep(1)
-                
-                # Clique com botão direito
-                await self.estado_cell.click(button="right")
-                logger.info(f"Clique com botão direito na célula de estado da WO {work_order_id}")
-                
-                # Aguardar um pouco para o menu de contexto aparecer
-                await asyncio.sleep(1)
-            
-            if await self.clicar_por_texto("Avançar"):
-                # Espera adaptativa
-                await asyncio.sleep(1)
-                
-                # Verificar se precisa confirmar
-                page_content = await self.page.content()
-                if "Confirmar" in page_content:
-                    await self.clicar_por_texto("Sim")
-                    await asyncio.sleep(1)
-                
-                # Busca dados atualizados
-                dados_atualizados = await self.search_work_order(work_order_id)
-                return {
-                    "success": True,
-                    "message": f"WO {work_order_id} alocada com sucesso.",
-                    "dados": dados_atualizados
-                }
-            
+            # Retornar os dados extraídos sem realizar alocação
             return {
-                "success": False,
-                "message": f"Falha ao alocar WO {work_order_id}.",
+                "success": True,
+                "message": f"Dados da WO {work_order_id} extraídos com sucesso.",
                 "dados": dados_wo
             }
             
         except Exception as e:
-            logger.error(f"Erro geral ao alocar WO: {e}")
+            logger.error(f"Erro geral ao processar WO: {e}")
             return {"success": False, "message": str(e)}
     
     async def clicar_por_texto(self, texto, timeout=None):
