@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader, Eye } from "lucide-react";
 import CardInfo from "../components/CardInfo";
@@ -263,7 +262,6 @@ const WorkOrderAllocation = () => {
   const [tentativas, setTentativas] = useState(0);
   
   const { authToken, user } = useAuthContext();
-  const navigate = useNavigate();
 
   // Limpar intervalo quando componente é desmontado
   useEffect(() => {
@@ -274,21 +272,18 @@ const WorkOrderAllocation = () => {
     };
   }, [progressInterval]);
 
-  // Log da configuração em ambiente de desenvolvimento e carregamento do histórico
+  // Log da configuração em ambiente de desenvolvimento
   useEffect(() => {
     logDebug("API Base URL configurada:", API_BASE_URL);
     logDebug("Ambiente:", import.meta.env.MODE);
     
-    // Carregar histórico de WOs do usuário atual sem preencher automaticamente
+    // Carregar histórico de WOs do usuário atual
     if (user?.id) {
       const historico = obterHistoricoWOs(user.id);
       setHistoricoWOs(historico);
       logDebug("Histórico de WOs carregado:", historico);
-      
-      // Limpar qualquer erro ao entrar na página
-      setError(null);
     }
-  }, [user?.id, authToken]);
+  }, [user?.id]);
 
   // Efeito para controlar a visibilidade do histórico
   useEffect(() => {
@@ -336,14 +331,14 @@ const WorkOrderAllocation = () => {
     }
     
     if (!workOrderNumber.trim()) {
-      toast.warning("Por favor, insira um número de WO para pesquisar");
-      setError("Por favor, insira um número de WO para pesquisar");
+      toast.error("Por favor, insira um número de WO válido");
+      setError("Por favor, insira um número de WO válido");
       return;
     }
     
     // Validar se a WO tem 8 dígitos numéricos
     if (!validarFormatoWO(workOrderNumber)) {
-      toast.warning("O número da WO deve conter exatamente 8 dígitos numéricos");
+      toast.error("O número da WO deve conter exatamente 8 dígitos numéricos");
       setError("O número da WO deve conter exatamente 8 dígitos numéricos");
       return;
     }
@@ -352,18 +347,6 @@ const WorkOrderAllocation = () => {
     if (!authToken || !user) {
       toast.error("Você precisa estar autenticado para realizar esta operação");
       setError("Erro de autenticação. Por favor, faça login novamente.");
-      return;
-    }
-    
-    // Verificar se o usuário do portal está configurado (apenas usuário é obrigatório)
-    // A senha pode estar armazenada apenas no backend para contas já integradas
-    if (!user?.usuario_portal) {
-      toast.error("Usuário do portal não configurado. Por favor, configure na página de Perfil.");
-      setError("Usuário do portal não configurado. Por favor, configure na página de Perfil.");
-      // Redirecionar para a página de perfil após 3 segundos
-      setTimeout(() => {
-        navigate("/perfil");
-      }, 3000);
       return;
     }
     
@@ -394,7 +377,7 @@ const WorkOrderAllocation = () => {
           clearInterval(interval);
           return 100;
         }
-        return prev + (100 / 30); // Incremento para completar em 60 segundos
+        return prev + (100 / 60); // Incremento para completar em 60 segundos
       });
     }, 1000);
     
@@ -412,16 +395,14 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
-             
+        fix-allocation-robustness
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
+      
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
+        master
+      
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
-      
-      // Log das credenciais para depuração
-      logDebug("Enviando credenciais do portal:", {
-        username: user?.usuario_portal || "Não configurado",
-        password: user?.senha_portal ? "Configurado" : "Não configurado"
-      });
       
       // Adicionar cabeçalhos CORS
       const response = await fetch(endpoint, {
@@ -476,8 +457,6 @@ const WorkOrderAllocation = () => {
           // Verificar se o erro 500 contém mensagem sobre WO não encontrada
           if (data && data.message && isWoNaoEncontradaError(data.message)) {
             mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
-          } else if (data && data.message && data.message.includes("credenciais")) {
-            mensagemErro = "Credenciais do portal inválidas ou expiradas. Por favor, atualize-as na página de Perfil.";
           } else {
             mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
           }
@@ -544,13 +523,8 @@ const WorkOrderAllocation = () => {
           tecnico: user?.name || "Técnico"
         };
         
-        // Limpar qualquer erro anterior quando dados são carregados com sucesso
-        setError(null);
         setWorkOrderData(data);
         setSearchResult(resultado);
-        
-        // Resetar contador de tentativas após sucesso
-        setTentativas(0);
         
         // Salvar no cache específico do usuário
         if (user?.id) {
@@ -558,17 +532,10 @@ const WorkOrderAllocation = () => {
           // Atualizar histórico
           setHistoricoWOs(obterHistoricoWOs(user.id));
         }
+        fix-allocation-robustness
       
       } else {
-        // Verificar se há dados disponíveis
-        if (!data || !Object.keys(data).length) {
-          setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
-          toast.warning(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
-          setProgress(100);
-          return;
-        }
-        
-        // Usar dados simulados para demonstração apenas se necessário
+        // Usar dados simulados para demonstração (apenas se não houver dados reais)
         const mockResult = {
           wo: workOrderNumber,
           slid: "CAKIBALE",
@@ -596,19 +563,15 @@ const WorkOrderAllocation = () => {
           estadoIntervencao: "Em Progresso"
         };
         
-        // Limpar qualquer erro anterior
-        setError(null);
         setWorkOrderData(data);
         setSearchResult(mockResult);
+        master
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
-        
-        // Salvar no cache do usuário para acesso rápido futuro
-        if (user?.id) {
-          salvarWOCache(mockResult, user.id);
-          setHistoricoWOs(obterHistoricoWOs(user.id));
-        }
+      } else {
+        // Se a resposta for success mas não tiver dados, tratar como WO não encontrada
+        setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
       }
       
       setProgress(100); // Garantir que a barra esteja completa
@@ -626,19 +589,16 @@ const WorkOrderAllocation = () => {
       } 
       // Verificar se é um erro de timeout
       else if (err.name === 'AbortError') {
-        // Se já tentou mais de 1 vez e continua dando timeout, sugerir que a WO não existe
-        if (tentativaAtual > 1) {
+        // Se já tentou mais de 2 vezes e continua dando timeout, sugerir que a WO não existe
+        if (tentativaAtual > 2) {
           mensagemErro = `WO ${workOrderNumber} não encontrada ou o servidor está demorando muito para responder. Verifique o número informado.`;
-          // Resetar contador de tentativas para evitar loops infinitos
-          setTentativas(0);
         } else {
-          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente.";
+          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
         }
       }
       
       setError(mensagemErro);
       setProgress(100); // Completar a barra mesmo em caso de erro
-      toast.error(mensagemErro); // Mostrar toast para feedback visual imediato
     } finally {
       setIsLoading(false);
     }

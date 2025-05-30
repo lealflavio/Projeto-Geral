@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 // Criar o contexto de autenticação
 const AuthContext = createContext();
@@ -28,35 +28,6 @@ export const AuthProvider = ({ children }) => {
     };
   });
 
-  // Efeito para sincronizar o estado com localStorage quando mudar
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const storedToken = localStorage.getItem('authToken');
-      const storedUser = localStorage.getItem('user');
-      
-      if (storedToken !== authToken) {
-        setAuthToken(storedToken || null);
-      }
-      
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-        } catch (error) {
-          console.error('Erro ao parsear dados do usuário:', error);
-        }
-      }
-    };
-    
-    // Adicionar listener para mudanças no localStorage
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Limpar listener ao desmontar
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [authToken]);
-
   // Função para login
   const login = (token, userData) => {
     localStorage.setItem('authToken', token);
@@ -73,20 +44,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Função para atualizar apenas os dados do usuário
-  const updateUserData = (userData) => {
-    const updatedUser = { ...user, ...userData };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-  };
-
   // Valor do contexto
   const value = {
     authToken,
     user,
     login,
     logout,
-    updateUserData,
     isAuthenticated: !!authToken
   };
 
