@@ -231,6 +231,22 @@ const determinarCorEstadoIntervencao = (estado) => {
   return { bg: "bg-yellow-50", border: "border-yellow-100", text: "text-yellow-600", icon: Clock };
 };
 
+// Função para verificar se uma mensagem de erro contém indicação de WO não encontrada
+const isWoNaoEncontradaError = (mensagem) => {
+  if (!mensagem) return false;
+  
+  const lowerMsg = mensagem.toLowerCase();
+  return lowerMsg.includes("não encontrada") || 
+         lowerMsg.includes("nao encontrada") || 
+         lowerMsg.includes("not found") || 
+         lowerMsg.includes("inexistente");
+};
+
+// Função para validar o formato do número da WO
+const validarFormatoWO = (numero) => {
+  return /^\d{8}$/.test(numero);
+};
+
 const WorkOrderAllocation = () => {
   const [workOrderNumber, setWorkOrderNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -242,6 +258,8 @@ const WorkOrderAllocation = () => {
   const [progressInterval, setProgressInterval] = useState(null);
   const [historicoWOs, setHistoricoWOs] = useState([]);
   const [showHistorico, setShowHistorico] = useState(true);
+  const [inputError, setInputError] = useState(false);
+  const [tentativas, setTentativas] = useState(0);
   
   const { authToken, user } = useAuthContext();
 
@@ -272,8 +290,39 @@ const WorkOrderAllocation = () => {
     setShowHistorico(!searchResult);
   }, [searchResult]);
 
+  // Validação em tempo real do formato da WO
   const handleChange = (e) => {
-    setWorkOrderNumber(e.target.value);
+    // Remover espaços antes e depois
+    const valorLimpo = e.target.value.trim();
+    
+    // Permitir apenas dígitos
+    const apenasDigitos = valorLimpo.replace(/\D/g, '');
+    
+    // Limitar a 8 dígitos
+    const valorFinal = apenasDigitos.slice(0, 8);
+    
+    setWorkOrderNumber(valorFinal);
+    
+    // Validar formato e mostrar feedback visual
+    setInputError(valorFinal.length > 0 && valorFinal.length !== 8);
+  };
+
+  // Função para lidar com colagem (paste) no campo
+  const handlePaste = (e) => {
+    // Prevenir o comportamento padrão
+    e.preventDefault();
+    
+    // Obter o texto colado
+    const textoColado = e.clipboardData.getData('text');
+    
+    // Limpar o texto (remover espaços e caracteres não numéricos)
+    const textoLimpo = textoColado.trim().replace(/\D/g, '').slice(0, 8);
+    
+    // Atualizar o estado
+    setWorkOrderNumber(textoLimpo);
+    
+    // Validar formato e mostrar feedback visual
+    setInputError(textoLimpo.length > 0 && textoLimpo.length !== 8);
   };
 
   const handleSubmit = async (e) => {
@@ -283,12 +332,14 @@ const WorkOrderAllocation = () => {
     
     if (!workOrderNumber.trim()) {
       toast.error("Por favor, insira um número de WO válido");
+      setError("Por favor, insira um número de WO válido");
       return;
     }
     
     // Validar se a WO tem 8 dígitos numéricos
-    if (!/^\d{8}$/.test(workOrderNumber)) {
+    if (!validarFormatoWO(workOrderNumber)) {
       toast.error("O número da WO deve conter exatamente 8 dígitos numéricos");
+      setError("O número da WO deve conter exatamente 8 dígitos numéricos");
       return;
     }
     
@@ -315,6 +366,10 @@ const WorkOrderAllocation = () => {
     setProgress(0);
     setShowHistorico(false);
     
+    // Incrementar contador de tentativas para esta WO
+    setTentativas(prev => prev + 1);
+    const tentativaAtual = tentativas + 1;
+    
     // Iniciar a barra de progresso
     const interval = setInterval(() => {
       setProgress(prev => {
@@ -340,16 +395,19 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
       
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
       
+      // Adicionar cabeçalhos CORS
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": tokenFormatado,
+          "Accept": "application/json",
+          "Origin": window.location.origin,
         },
         body: JSON.stringify({
           work_order_id: workOrderNumber,
@@ -358,13 +416,22 @@ const WorkOrderAllocation = () => {
             password: user?.senha_portal || ""
           }
         }),
-        signal: controller.signal
+        signal: controller.signal,
+        mode: "cors", // Garantir que a requisição use CORS
+        credentials: "include" // Incluir cookies na requisição
       });
       
       clearTimeout(timeoutId);
       
-      const data = await response.json();
-      logDebug("Resposta da API:", data);
+      // Tentar obter o corpo da resposta como JSON
+      let data;
+      try {
+        data = await response.json();
+        logDebug("Resposta da API:", data);
+      } catch (jsonError) {
+        logDebug("Erro ao parsear resposta como JSON:", jsonError);
+        data = { status: 'error', message: 'Erro ao processar resposta do servidor' };
+      }
       
       // Limpar o intervalo quando os dados retornarem
       clearInterval(interval);
@@ -373,16 +440,23 @@ const WorkOrderAllocation = () => {
       if (!response.ok) {
         let mensagemErro = "Erro ao alocar WO";
         
+        // Verificar se a mensagem de erro contém indicação de WO não encontrada
+        if (response.status === 404 || 
+            (data && isWoNaoEncontradaError(data.message)) || 
+            (data && data.error && isWoNaoEncontradaError(data.error))) {
+          mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
+        }
         // Mensagens de erro mais específicas
-        if (response.status === 401) {
+        else if (response.status === 401) {
           mensagemErro = "Erro de autenticação. Suas credenciais podem ter expirado. Por favor, faça login novamente.";
-          // Forçar logout se o token estiver inválido
-          // Se você tiver uma função de logout no contexto de autenticação, pode chamá-la aqui
-        } else if (response.status === 404) {
-          mensagemErro = "WO não encontrada. Verifique o número informado.";
         } else if (response.status === 500) {
-          mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
-        } else if (data.message) {
+          // Verificar se o erro 500 contém mensagem sobre WO não encontrada
+          if (data && data.message && isWoNaoEncontradaError(data.message)) {
+            mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
+          } else {
+            mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
+          }
+        } else if (data && data.message) {
           mensagemErro = data.message;
         }
         
@@ -392,7 +466,7 @@ const WorkOrderAllocation = () => {
         return;
       }
       
-      if (data.status === 'success' && data.data) {
+      if (data && data.status === 'success' && data.data) {
         // Extrair informações do campo descricao
         const infoCliente = extrairInformacoes(data.data.descricao || "");
         
@@ -454,44 +528,12 @@ const WorkOrderAllocation = () => {
           // Atualizar histórico
           setHistoricoWOs(obterHistoricoWOs(user.id));
         }
+        
+        // Resetar contador de tentativas após sucesso
+        setTentativas(0);
       } else {
-        // Usar dados simulados para demonstração (apenas se não houver dados reais)
-        const mockResult = {
-          wo: workOrderNumber,
-          slid: "CAKIBALE",
-          corFibra: "Azul",
-          corFibraHex: "#1E90FF",
-          morada: {
-            linha1: "Rua das Flores, 123",
-            linha2: "3000-050 Lisboa"
-          },
-          acesso: "Portão principal",
-          numBox: "B-4578",
-          tipoBox: "Fibra Óptica",
-          telefone: "Sim",
-          dataAgendamento: "28/05/2025",
-          status: "pendente",
-          tipoInstalacao: "Fibra + TV",
-          tecnico: user?.name || "Técnico",
-          endereco: "Rua das Flores, 123\n3000-050 Lisboa",
-          coordenadas: {
-            lat: 38.7223,
-            lng: -9.1393
-          },
-          donaRede: "PDO123",
-          portoEntrada: "Porto 5",
-          estadoIntervencao: "Em Progresso"
-        };
-        
-        setWorkOrderData(data);
-        setSearchResult(mockResult);
-        
-        // Salvar no cache específico do usuário
-        if (user?.id) {
-          salvarWOCache(mockResult, user.id);
-          // Atualizar histórico
-          setHistoricoWOs(obterHistoricoWOs(user.id));
-        }
+        // Se a resposta for success mas não tiver dados, tratar como WO não encontrada
+        setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
       }
       
       setProgress(100); // Garantir que a barra esteja completa
@@ -503,8 +545,18 @@ const WorkOrderAllocation = () => {
       
       let mensagemErro = "Erro de conexão. Verifique sua internet e tente novamente.";
       
-      if (err.name === 'AbortError') {
-        mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
+      // Verificar se é um erro de CORS
+      if (err.message && err.message.includes('CORS')) {
+        mensagemErro = "Erro de permissão de acesso entre domínios (CORS). Por favor, contate o suporte técnico.";
+      } 
+      // Verificar se é um erro de timeout
+      else if (err.name === 'AbortError') {
+        // Se já tentou mais de 2 vezes e continua dando timeout, sugerir que a WO não existe
+        if (tentativaAtual > 2) {
+          mensagemErro = `WO ${workOrderNumber} não encontrada ou o servidor está demorando muito para responder. Verifique o número informado.`;
+        } else {
+          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
+        }
       }
       
       setError(mensagemErro);
@@ -595,19 +647,30 @@ const WorkOrderAllocation = () => {
                 type="text"
                 value={workOrderNumber}
                 onChange={handleChange}
+                onPaste={handlePaste}
                 placeholder="Ex: 12345678"
-                className="w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className={`w-full p-3 pl-10 border rounded-xl text-sm focus:outline-none focus:ring-2 ${
+                  inputError 
+                    ? "border-red-300 focus:ring-red-500 bg-red-50" 
+                    : "focus:ring-blue-600"
+                }`}
                 disabled={isLoading}
+                maxLength={8}
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             </div>
+            {inputError && (
+              <p className="text-red-500 text-xs mt-1">
+                O número da WO deve conter exatamente 8 dígitos numéricos
+              </p>
+            )}
           </div>
           
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || inputError}
             className={`w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2 ${
-              isLoading ? "opacity-70 cursor-not-allowed" : ""
+              (isLoading || inputError) ? "opacity-70 cursor-not-allowed" : ""
             }`}
           >
             {isLoading ? (
@@ -884,6 +947,7 @@ const WorkOrderAllocation = () => {
                   onClick={() => {
                     setSearchResult(null);
                     setWorkOrderNumber("");
+                    setInputError(false);
                   }}
                 >
                   Nova Busca
