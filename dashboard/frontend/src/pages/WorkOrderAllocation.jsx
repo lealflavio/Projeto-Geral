@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { Search, Clipboard, MapPin, ArrowRight, Clock, AlertCircle, CheckCircle, X, Loader, Eye } from "lucide-react";
 import CardInfo from "../components/CardInfo";
@@ -262,6 +263,7 @@ const WorkOrderAllocation = () => {
   const [tentativas, setTentativas] = useState(0);
   
   const { authToken, user } = useAuthContext();
+  const navigate = useNavigate();
 
   // Limpar intervalo quando componente é desmontado
   useEffect(() => {
@@ -357,6 +359,10 @@ const WorkOrderAllocation = () => {
     if (!user?.usuario_portal || !user?.senha_portal) {
       toast.error("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
       setError("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
+      // Redirecionar para a página de perfil após 3 segundos
+      setTimeout(() => {
+        navigate("/perfil");
+      }, 3000);
       return;
     }
     

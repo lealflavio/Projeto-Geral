@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Settings, Check, X, Eye, EyeOff, RefreshCw, ExternalLink, FolderOpen } from "lucide-react";
+import { useAuthContext } from "../context/AuthContext";
 
 const Toast = ({ show, message, buttonText, onButton }) => {
   if (!show) return null;
@@ -41,6 +42,9 @@ const Perfil = () => {
   // Estado do usuário
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  
+  // Contexto de autenticação para atualizar credenciais globalmente
+  const { login } = useAuthContext();
 
   // Edição dos dados
   const [editandoWhatsapp, setEditandoWhatsapp] = useState(false);
@@ -206,12 +210,43 @@ const Perfil = () => {
         setTimeout(() => fetchPastaLink(usuarioPortal), 5000);
       }
       
-      setUsuario((u) => ({ 
-        ...u, 
+      // Atualizar o estado local do usuário
+      const usuarioAtualizado = { 
+        ...usuario, 
         integrado: true, 
         usuario_portal: usuarioPortal,
+        senha_portal: senhaPortal, // Garantir que a senha também seja armazenada
         pasta_novos_link: response.data?.pasta_novos_link || ""
-      }));
+      };
+      
+      setUsuario(usuarioAtualizado);
+      
+      // IMPORTANTE: Atualizar o contexto global de autenticação e localStorage
+      // Isso garante que as credenciais estejam disponíveis em toda a aplicação
+      const userDataString = localStorage.getItem('user');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        const updatedUserData = {
+          ...userData,
+          usuario_portal: usuarioPortal,
+          senha_portal: senhaPortal
+        };
+        
+        // Atualizar localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUserData));
+        
+        // Atualizar contexto global usando a função login do AuthContext
+        login(token, updatedUserData);
+        
+        // Disparar evento de storage para garantir sincronização entre abas
+        window.dispatchEvent(new Event('storage'));
+        
+        console.log("Credenciais do portal atualizadas globalmente:", {
+          usuario: usuarioPortal,
+          senha: senhaPortal ? "Configurada" : "Não configurada"
+        });
+      }
+      
       setEditandoPortal(false);
       setSenhaPortal("");
       setToast({
