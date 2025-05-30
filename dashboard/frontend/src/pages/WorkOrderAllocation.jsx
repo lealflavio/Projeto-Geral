@@ -395,11 +395,7 @@ const WorkOrderAllocation = () => {
       
       // Adicionar timeout para evitar que a requisição fique pendente por muito tempo
       const controller = new AbortController();
-        fix-allocation-robustness
       const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
-      
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 segundos de timeout
-        master
       
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
@@ -565,12 +561,13 @@ const WorkOrderAllocation = () => {
         
         setWorkOrderData(data);
         setSearchResult(mockResult);
-        master
         
         // Resetar contador de tentativas após sucesso
         setTentativas(0);
-      } else {
-        // Se a resposta for success mas não tiver dados, tratar como WO não encontrada
+      } 
+      
+      // Se a resposta for success mas não tiver dados, tratar como WO não encontrada
+      if (!data || Object.keys(data).length === 0) {
         setError(`WO ${workOrderNumber} não encontrada ou sem dados disponíveis.`);
       }
       
