@@ -16,7 +16,7 @@ const getPageTitle = (pathname) => {
     case "/perfil":
       return "Perfil";
     case "/alocar-wo":
-      return "Alocar WO";
+      return "Buscar WO";
     case "/mapa-kms":
       return "Mapa de KMs";
     case "/estimativa-ganhos":
