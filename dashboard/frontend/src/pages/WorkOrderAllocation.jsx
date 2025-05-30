@@ -344,9 +344,11 @@ const determinarCorFibraPorRegras = (donaRede, portoEntrada, fibra) => {
   }
   // Regras para VDF
   else if (donaRede && donaRede.toUpperCase() === "VDF" && fibra) {
-    // Para VDF, as duas últimas palavras do campo fibra indicam a cor do tubo e da fibra
-    const palavras = fibra.split(/\s+/);
+    // Para VDF, as cores vêm no formato com underscore, como VDF-COI08-JSO0152-91005_T1_F6_White_Yellow
+    // Precisamos extrair as duas últimas palavras após underscore
+    const palavras = fibra.split('_');
     if (palavras.length >= 2) {
+      // Extrair as duas últimas palavras (cores do tubo e da fibra)
       const corTubo = palavras[palavras.length - 2];
       const corFibra = palavras[palavras.length - 1];
       
