@@ -272,27 +272,19 @@ const WorkOrderAllocation = () => {
     };
   }, [progressInterval]);
 
-  // Log da configuração em ambiente de desenvolvimento e inicialização da página
+  // Log da configuração em ambiente de desenvolvimento e carregamento do histórico
   useEffect(() => {
     logDebug("API Base URL configurada:", API_BASE_URL);
     logDebug("Ambiente:", import.meta.env.MODE);
     
-    // Carregar histórico de WOs do usuário atual
+    // Carregar histórico de WOs do usuário atual sem preencher automaticamente
     if (user?.id) {
       const historico = obterHistoricoWOs(user.id);
       setHistoricoWOs(historico);
       logDebug("Histórico de WOs carregado:", historico);
       
-      // Verificar se há uma WO em cache recente para carregar automaticamente
-      const ultimaWO = historico[0]?.numero;
-      if (ultimaWO) {
-        setWorkOrderNumber(ultimaWO);
-        // Simular um pequeno atraso para garantir que a interface esteja pronta
-        setTimeout(() => {
-          logDebug("Carregando automaticamente a última WO:", ultimaWO);
-          handleSubmit();
-        }, 500);
-      }
+      // Limpar qualquer erro ao entrar na página
+      setError(null);
     }
   }, [user?.id, authToken]);
 
@@ -342,14 +334,14 @@ const WorkOrderAllocation = () => {
     }
     
     if (!workOrderNumber.trim()) {
-      toast.error("Por favor, insira um número de WO válido");
-      setError("Por favor, insira um número de WO válido");
+      toast.warning("Por favor, insira um número de WO para pesquisar");
+      setError("Por favor, insira um número de WO para pesquisar");
       return;
     }
     
     // Validar se a WO tem 8 dígitos numéricos
     if (!validarFormatoWO(workOrderNumber)) {
-      toast.error("O número da WO deve conter exatamente 8 dígitos numéricos");
+      toast.warning("O número da WO deve conter exatamente 8 dígitos numéricos");
       setError("O número da WO deve conter exatamente 8 dígitos numéricos");
       return;
     }
@@ -358,6 +350,13 @@ const WorkOrderAllocation = () => {
     if (!authToken || !user) {
       toast.error("Você precisa estar autenticado para realizar esta operação");
       setError("Erro de autenticação. Por favor, faça login novamente.");
+      return;
+    }
+    
+    // Verificar se as credenciais do portal estão configuradas
+    if (!user?.usuario_portal || !user?.senha_portal) {
+      toast.error("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
+      setError("Credenciais do portal não configuradas. Por favor, configure-as na página de Perfil.");
       return;
     }
     
@@ -410,6 +409,12 @@ const WorkOrderAllocation = () => {
              
       // Garantir que o token seja enviado com o prefixo Bearer
       const tokenFormatado = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+      
+      // Log das credenciais para depuração
+      logDebug("Enviando credenciais do portal:", {
+        username: user?.usuario_portal || "Não configurado",
+        password: user?.senha_portal ? "Configurado" : "Não configurado"
+      });
       
       // Adicionar cabeçalhos CORS
       const response = await fetch(endpoint, {
@@ -464,6 +469,8 @@ const WorkOrderAllocation = () => {
           // Verificar se o erro 500 contém mensagem sobre WO não encontrada
           if (data && data.message && isWoNaoEncontradaError(data.message)) {
             mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
+          } else if (data && data.message && data.message.includes("credenciais")) {
+            mensagemErro = "Credenciais do portal inválidas ou expiradas. Por favor, atualize-as na página de Perfil.";
           } else {
             mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
           }
