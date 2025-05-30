@@ -231,20 +231,139 @@ const determinarCorEstadoIntervencao = (estado) => {
   return { bg: "bg-yellow-50", border: "border-yellow-100", text: "text-yellow-600", icon: Clock };
 };
 
-// Função para verificar se uma mensagem de erro contém indicação de WO não encontrada
-const isWoNaoEncontradaError = (mensagem) => {
-  if (!mensagem) return false;
+// Função para determinar a cor da fibra com base no texto e regras específicas
+const determinarCorFibra = (corTexto, corHex) => {
+  // Valores padrão
+  let resultado = {
+    nome: corTexto || "Cinza",
+    hex: corHex || "#CCCCCC",
+    confianca: "baixa"
+  };
   
-  const lowerMsg = mensagem.toLowerCase();
-  return lowerMsg.includes("não encontrada") || 
-         lowerMsg.includes("nao encontrada") || 
-         lowerMsg.includes("not found") || 
-         lowerMsg.includes("inexistente");
+  // Mapeamento de cores em inglês para português
+  const traducaoCores = {
+    "blue": "Azul",
+    "red": "Vermelho",
+    "green": "Verde",
+    "yellow": "Amarelo",
+    "white": "Branco",
+    "black": "Preto",
+    "brown": "Marrom",
+    "orange": "Laranja",
+    "purple": "Roxo",
+    "pink": "Rosa",
+    "gray": "Cinza",
+    "grey": "Cinza"
+  };
+  
+  // Mapeamento de cores para códigos hexadecimais
+  const coresHex = {
+    "azul": "#1E90FF",
+    "vermelho": "#FF4136",
+    "verde": "#2ECC40",
+    "amarelo": "#FFDC00",
+    "branco": "#FFFFFF",
+    "preto": "#111111",
+    "marrom": "#A52A2A",
+    "laranja": "#FF851B",
+    "roxo": "#B10DC9",
+    "rosa": "#FF80CC",
+    "cinza": "#AAAAAA"
+  };
+  
+  // Se já temos um valor hexadecimal, usá-lo
+  if (corHex && corHex.startsWith('#')) {
+    resultado.hex = corHex;
+  }
+  
+  // Processar texto da cor
+  if (corTexto) {
+    // Converter para minúsculas para facilitar comparação
+    const textoLower = corTexto.toLowerCase();
+    
+    // Verificar se é uma cor em inglês e traduzir
+    for (const [ingles, portugues] of Object.entries(traducaoCores)) {
+      if (textoLower.includes(ingles.toLowerCase())) {
+        resultado.nome = portugues;
+        resultado.hex = coresHex[portugues.toLowerCase()] || resultado.hex;
+        resultado.confianca = "média";
+        break;
+      }
+    }
+    
+    // Verificar se já é uma cor em português
+    for (const [portugues, hex] of Object.entries(coresHex)) {
+      if (textoLower.includes(portugues)) {
+        resultado.nome = portugues.charAt(0).toUpperCase() + portugues.slice(1);
+        resultado.hex = hex;
+        resultado.confianca = "alta";
+        break;
+      }
+    }
+  }
+  
+  return resultado;
 };
 
-// Função para validar o formato do número da WO
-const validarFormatoWO = (numero) => {
-  return /^\d{8}$/.test(numero);
+// Função para determinar a cor da fibra com base na dona de rede e porto primário
+const determinarCorFibraPorRegras = (donaRede, portoEntrada, fibra) => {
+  // Valores padrão
+  let resultado = {
+    nome: "Cinza",
+    hex: "#CCCCCC",
+    confianca: "baixa",
+    mensagem: ""
+  };
+  
+  // Regras para NOS
+  if (donaRede && donaRede.toUpperCase() === "NOS" && portoEntrada) {
+    // Mapeamento de portos para cores na NOS
+    const mapaPortosCores = {
+      "1": { nome: "Azul", hex: "#1E90FF" },
+      "2": { nome: "Laranja", hex: "#FF851B" },
+      "3": { nome: "Verde", hex: "#2ECC40" },
+      "4": { nome: "Marrom", hex: "#A52A2A" },
+      "5": { nome: "Cinza", hex: "#AAAAAA" },
+      "6": { nome: "Branco", hex: "#FFFFFF" },
+      "7": { nome: "Vermelho", hex: "#FF4136" },
+      "8": { nome: "Preto", hex: "#111111" }
+    };
+    
+    // Extrair número do porto
+    const numeroPorto = portoEntrada.replace(/\D/g, '');
+    
+    if (numeroPorto && mapaPortosCores[numeroPorto]) {
+      resultado = {
+        ...mapaPortosCores[numeroPorto],
+        confianca: "alta",
+        mensagem: "A cor mostrada é provavelmente a correta, mas o ideal será confirmar com o suporte de construção de rede."
+      };
+    } else {
+      resultado.mensagem = "Não foi possível determinar a cor com base no porto. Consulte o suporte de construção de rede.";
+    }
+  }
+  // Regras para VDF
+  else if (donaRede && donaRede.toUpperCase() === "VDF" && fibra) {
+    // Para VDF, as duas últimas palavras do campo fibra indicam a cor do tubo e da fibra
+    const palavras = fibra.split(/\s+/);
+    if (palavras.length >= 2) {
+      const corTubo = palavras[palavras.length - 2];
+      const corFibra = palavras[palavras.length - 1];
+      
+      // Determinar cor com base nas palavras extraídas
+      const corTuboInfo = determinarCorFibra(corTubo);
+      const corFibraInfo = determinarCorFibra(corFibra);
+      
+      resultado = {
+        nome: `${corTuboInfo.nome} / ${corFibraInfo.nome}`,
+        hex: corFibraInfo.hex, // Usamos a cor da fibra como principal
+        confianca: "média",
+        mensagem: "Cores extraídas do campo Fibra. Tubo: " + corTuboInfo.nome + ", Fibra: " + corFibraInfo.nome
+      };
+    }
+  }
+  
+  return resultado;
 };
 
 const WorkOrderAllocation = () => {
@@ -329,26 +448,25 @@ const WorkOrderAllocation = () => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    
-    if (!workOrderNumber.trim()) {
-      toast.error("Por favor, insira um número de WO válido");
-      setError("Por favor, insira um número de WO válido");
+        if (!workOrderNumber.trim()) {
+      toast.warning("Por favor, insira um número de WO para pesquisar");
+      setError("Por favor, insira um número de WO para pesquisar");
       return;
     }
     
     // Validar se a WO tem 8 dígitos numéricos
     if (!validarFormatoWO(workOrderNumber)) {
-      toast.error("O número da WO deve conter exatamente 8 dígitos numéricos");
+      toast.warning("O número da WO deve conter exatamente 8 dígitos numéricos");
       setError("O número da WO deve conter exatamente 8 dígitos numéricos");
       return;
     }
     
     // Verificar se o usuário está autenticado
     if (!authToken || !user) {
-      toast.error("Você precisa estar autenticado para realizar esta operação");
-      setError("Erro de autenticação. Por favor, faça login novamente.");
+      toast.error("Sessão expirada. Por favor, faça login novamente");
+      setError("Sessão expirada. Por favor, faça login novamente");
       return;
-    }
+    }}
     
     // Verificar se a WO está no cache do usuário atual
     if (user?.id) {
@@ -445,19 +563,24 @@ const WorkOrderAllocation = () => {
             (data && isWoNaoEncontradaError(data.message)) || 
             (data && data.error && isWoNaoEncontradaError(data.error))) {
           mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
+          toast.warning(mensagemErro);
         }
         // Mensagens de erro mais específicas
         else if (response.status === 401) {
-          mensagemErro = "Erro de autenticação. Suas credenciais podem ter expirado. Por favor, faça login novamente.";
+          mensagemErro = "Sessão expirada. Por favor, faça login novamente.";
+          toast.error(mensagemErro);
         } else if (response.status === 500) {
           // Verificar se o erro 500 contém mensagem sobre WO não encontrada
           if (data && data.message && isWoNaoEncontradaError(data.message)) {
             mensagemErro = `WO ${workOrderNumber} não encontrada. Verifique o número informado.`;
+            toast.warning(mensagemErro);
           } else {
-            mensagemErro = "Erro no servidor. O servidor pode estar sobrecarregado, tente novamente em alguns minutos.";
+            mensagemErro = "Erro no servidor. Tente novamente em alguns minutos.";
+            toast.error(mensagemErro);
           }
         } else if (data && data.message) {
           mensagemErro = data.message;
+          toast.error(mensagemErro);
         }
         
         setError(mensagemErro);
@@ -522,13 +645,16 @@ const WorkOrderAllocation = () => {
         setWorkOrderData(data);
         setSearchResult(resultado);
         
+        // Limpar qualquer erro anterior e mostrar mensagem de sucesso
+        setError(null);
+        toast.success(`WO ${workOrderNumber} alocada com sucesso!`);
+        
         // Salvar no cache específico do usuário
         if (user?.id) {
           salvarWOCache(resultado, user.id);
           // Atualizar histórico
           setHistoricoWOs(obterHistoricoWOs(user.id));
         }
-        fix-allocation-robustness
       
       } else {
         // Usar dados simulados para demonstração (apenas se não houver dados reais)
@@ -583,15 +709,20 @@ const WorkOrderAllocation = () => {
       // Verificar se é um erro de CORS
       if (err.message && err.message.includes('CORS')) {
         mensagemErro = "Erro de permissão de acesso entre domínios (CORS). Por favor, contate o suporte técnico.";
+        toast.error(mensagemErro);
       } 
       // Verificar se é um erro de timeout
       else if (err.name === 'AbortError') {
         // Se já tentou mais de 2 vezes e continua dando timeout, sugerir que a WO não existe
         if (tentativaAtual > 2) {
           mensagemErro = `WO ${workOrderNumber} não encontrada ou o servidor está demorando muito para responder. Verifique o número informado.`;
+          toast.warning(mensagemErro);
         } else {
-          mensagemErro = "A requisição demorou muito tempo. O servidor pode estar sobrecarregado, tente novamente mais tarde.";
+          mensagemErro = "A requisição demorou muito tempo. Tente novamente em alguns instantes.";
+          toast.warning(mensagemErro);
         }
+      } else {
+        toast.error(mensagemErro);
       }
       
       setError(mensagemErro);
@@ -848,25 +979,51 @@ const WorkOrderAllocation = () => {
                     </div>
                   )}
                   
-                  {/* Fibra */}
+                  {/* Fibra - sem círculo de cor */}
                   {temValor(searchResult.corFibra) && (
                     <div>
                       <h3 className="text-xs text-gray-500 mb-1">Fibra</h3>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: determinarCorFibra(searchResult.corFibra, searchResult.corFibraHex).hex }}
-                        ></div>
-                        <p className="text-gray-800">{searchResult.corFibra}</p>
-                      </div>
+                      <p className="text-gray-800">{searchResult.corFibra}</p>
                     </div>
                   )}
                   
-                  {/* Porto Primário (movido para depois de Fibra) */}
+                  {/* Porto Primário com indicação de cor da fibra */}
                   {temValor(searchResult.portoEntrada) && (
                     <div>
                       <h3 className="text-xs text-gray-500 mb-1">Porto Primário</h3>
-                      <p className="text-gray-800 font-medium">{searchResult.portoEntrada}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-gray-800 font-medium">{searchResult.portoEntrada}</p>
+                        
+                        {/* Indicador de cor da fibra baseado nas regras */}
+                        {(() => {
+                          const corInfo = determinarCorFibraPorRegras(
+                            searchResult.donaRede, 
+                            searchResult.portoEntrada,
+                            searchResult.corFibra
+                          );
+                          
+                          return (
+                            <div className="flex items-center gap-2 ml-2">
+                              <div 
+                                className="w-4 h-4 rounded-full border border-gray-200" 
+                                style={{ backgroundColor: corInfo.hex }}
+                                title={corInfo.nome}
+                              ></div>
+                              <span className="text-sm text-gray-700">{corInfo.nome}</span>
+                              
+                              {/* Ícone de informação com tooltip */}
+                              {corInfo.mensagem && (
+                                <div className="relative group">
+                                  <AlertCircle size={16} className="text-amber-500 cursor-help" />
+                                  <div className="absolute z-10 invisible group-hover:visible bg-white border border-gray-200 p-2 rounded-md shadow-md w-64 text-xs text-gray-700 top-full left-0 mt-1">
+                                    {corInfo.mensagem}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
                   
@@ -878,29 +1035,34 @@ const WorkOrderAllocation = () => {
                     </div>
                   )}
                   
-                  {/* Morada em duas linhas */}
+                  {/* Morada em duas linhas - simplificada quando anonimizada */}
                   {(temValor(searchResult.morada.linha1) || temValor(searchResult.morada.linha2)) && (
                     <div>
                       <h3 className="text-xs text-gray-500 mb-1">Morada</h3>
                       <div className="flex items-start gap-2">
                         <div className="flex-1">
-                          {temValor(searchResult.morada.linha1) && (
+                          {/* Verificar se contém "Anonimizado" e simplificar */}
+                          {temValor(searchResult.morada.linha1) && searchResult.morada.linha1.includes("Anonimizado") ? (
+                            <p className="text-gray-800">Anonimizado</p>
+                          ) : temValor(searchResult.morada.linha1) && (
                             <p className="text-gray-800">
                               {searchResult.morada.linha1}
                             </p>
                           )}
-                          {temValor(searchResult.morada.linha2) && (
+                          {temValor(searchResult.morada.linha2) && !searchResult.morada.linha1.includes("Anonimizado") && (
                             <p className="text-gray-800 text-sm">{searchResult.morada.linha2}</p>
                           )}
                         </div>
                         <button
                           className={`text-blue-600 p-1 hover:bg-blue-50 rounded-full transition ${copiedField === 'morada' ? 'bg-green-50 text-green-500' : ''}`}
-                          onClick={() => handleCopyToClipboard(
-                            typeof searchResult.morada === 'object'
-                              ? `${searchResult.morada.linha1}${searchResult.morada.linha2 ? '\n' + searchResult.morada.linha2 : ''}`
-                              : searchResult.morada,
-                            'morada'
-                          )}
+                          onClick={() => handleCopyToClipboard(searchResult.endereco, 'morada')}
+                          title={copiedField === 'morada' ? 'Copiado!' : 'Copiar Morada'}
+                        >
+                          <Clipboard size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}         )}
                           title={copiedField === 'morada' ? 'Copiado!' : 'Copiar morada'}
                         >
                           <Clipboard size={16} />
@@ -951,22 +1113,39 @@ const WorkOrderAllocation = () => {
                     </div>
                   )}
                   
-                  {/* Instalar Telefone? */}
-                  {temValor(searchResult.telefone) && (
+                  {/* Entregar Telefone - apenas Sim ou Não */}
+                  {temValor(searchResult.telefone) && (searchResult.telefone.toLowerCase() === "sim" || searchResult.telefone.toLowerCase() === "não" || searchResult.telefone.toLowerCase() === "nao") && (
                     <div>
-                      <h3 className="text-xs text-gray-500 mb-1">Instalar Telefone?</h3>
-                      <p className="text-gray-800 font-medium">{searchResult.telefone}</p>
+                      <h3 className="text-xs text-gray-500 mb-1">Entregar Telefone?</h3>
+                      <p className="text-gray-800 font-medium">
+                        {searchResult.telefone.toLowerCase() === "sim" ? "Sim" : "Não"}
+                      </p>
                     </div>
-                  )}
-                  
-                  {/* Data de Agendamento */}
+                  )}}
+                              {/* Data de Agendamento - sem segundos */}
                   {temValor(searchResult.dataAgendamento) && (
                     <div>
                       <h3 className="text-xs text-gray-500 mb-1">Data de Agendamento</h3>
-                      <p className="text-gray-800">{searchResult.dataAgendamento}</p>
+                      <p className="text-gray-800 font-medium">
+                        {(() => {
+                          // Formatar data para remover segundos
+                          const dataCompleta = searchResult.dataAgendamento;
+                          if (dataCompleta.includes(':')) {
+                            // Se tem formato com hora (HH:MM:SS)
+                            const partes = dataCompleta.split(' ');
+                            if (partes.length >= 2) {
+                              const data = partes[0];
+                              const horaCompleta = partes[1];
+                              // Extrair apenas hora e minuto (HH:MM)
+                              const horaSemSegundos = horaCompleta.split(':').slice(0, 2).join(':');
+                              return `${data} ${horaSemSegundos}`;
+                            }
+                          }
+                          return dataCompleta; // Retorna original se não conseguir formatar
+                        })()}
+                      </p>
                     </div>
-                  )}
-                </div>
+                  )}            </div>
               </div>
               
               {/* Botões de ação - Nova Busca e Voltar */}
