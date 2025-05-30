@@ -32,7 +32,10 @@ SELENIUM_SELECTORS = {
     "AVANCAR_BUTTON": "xpath=//span[contains(text(), 'Avançar')]/parent::div[contains(@class, 'v-button')]",
     "EVOLUIR_BUTTON": "xpath=//span[contains(text(), 'Evoluir WorkOrder')]/parent::div[contains(@class, 'v-button')]",
     "CONFIRMAR_BUTTON": "xpath=//span[contains(text(), 'Sim')]/parent::div[contains(@class, 'v-button')]",
-    "OK_BUTTON": "xpath=//span[contains(text(), 'Ok')]/parent::div[contains(@class, 'v-button')]"
+    "OK_BUTTON": "xpath=//span[contains(text(), 'Ok')]/parent::div[contains(@class, 'v-button')]",
+    
+    # Menu de contexto
+    "CONSULTAR_DETALHE": "xpath=//div[contains(@class, 'ctxmenu-name') and contains(text(), 'Consultar Detalhe')]"
 }
 
 class WondercomClient:
@@ -219,20 +222,34 @@ class WondercomClient:
             # Aguardar um pouco para garantir que a tabela foi carregada
             await asyncio.sleep(2)
             
-            # Buscar a linha da WO - usando XPath exato do Selenium
-            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
+            # Buscar a célula com o estado da WO - usando o seletor baseado no HTML fornecido
+            cell_selector = "//td[contains(@class, 'v-table-cell-content')]//div[contains(@class, 'v-table-cell-wrapper')]"
             
             try:
-                # Esperar pela linha com timeout adaptativo
-                row_element = await self.page.wait_for_selector(row_xpath, 
-                                                    timeout=self.adaptive_wait.get_timeout())
+                # Esperar pela célula com timeout adaptativo
+                cell_elements = await self.page.query_selector_all(cell_selector)
                 
-                if not row_element:
-                    logger.warning(f"WO {work_order_id} não encontrada")
+                if not cell_elements or len(cell_elements) == 0:
+                    logger.warning(f"Células da tabela não encontradas para WO {work_order_id}")
+                    await self.page.screenshot(path="table_not_found.png")
                     return None
-                    
-                # Extrair estado da WO
-                estado_wo = await self.extract_wo_state(work_order_id)
+                
+                # Encontrar a célula que contém o estado da WO
+                estado_wo = None
+                for cell in cell_elements:
+                    text = await cell.text_content()
+                    text = text.strip().upper()
+                    if text and (text in ["IN PROGRESS", "ALLOCATED", "JOB START", "JOB CLOSED", "PENDENTE FATURACAO"] or 
+                                "JOB" in text or "ALLOCATED" in text or "PROGRESS" in text or 
+                                "CLOSED" in text or "PENDENTE" in text):
+                        estado_wo = text
+                        # Salvar a célula para cliques
+                        self.estado_cell = cell
+                        break
+                
+                if not estado_wo:
+                    logger.warning(f"Estado da WO {work_order_id} não encontrado")
+                    return None
                 
                 # Ajustar timeout após sucesso
                 self.adaptive_wait.adjust_timeout(True)
@@ -253,27 +270,6 @@ class WondercomClient:
             logger.error(f"Erro ao buscar WO {work_order_id}: {e}")
             return None
     
-    async def extract_wo_state(self, work_order_id):
-        """Extrai o estado da WO da linha de resultado."""
-        try:
-            # Usar XPath exato do Selenium
-            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
-            
-            # Encontrar todas as células da linha
-            cells = await self.page.query_selector_all(f"{row_xpath}/td")
-            
-            for cell in cells:
-                text = await cell.text_content()
-                text = text.strip().upper()
-                if text and (text in ["IN PROGRESS", "ALLOCATED", "JOB START", "JOB CLOSED"] or 
-                            "JOB" in text or "ALLOCATED" in text or "PROGRESS" in text or "CLOSED" in text):
-                    return text
-            
-            return None
-        except Exception as e:
-            logger.error(f"Erro ao extrair estado da WO: {e}")
-            return None
-    
     async def extract_work_order_details(self, work_order_id, estado_wo):
         """Extrai detalhes completos da ordem de trabalho."""
         try:
@@ -281,6 +277,35 @@ class WondercomClient:
                 "id": work_order_id,
                 "estado": estado_wo
             }
+            
+            # Clicar na célula do estado para selecionar a linha
+            if hasattr(self, 'estado_cell') and self.estado_cell:
+                # Primeiro clique normal (esquerdo)
+                await self.estado_cell.click()
+                logger.info(f"Clique normal na célula de estado da WO {work_order_id}")
+                
+                # Aguardar um pouco para garantir que a linha foi selecionada
+                await asyncio.sleep(1)
+                
+                # Clique com botão direito
+                await self.estado_cell.click(button="right")
+                logger.info(f"Clique com botão direito na célula de estado da WO {work_order_id}")
+                
+                # Aguardar um pouco para o menu de contexto aparecer
+                await asyncio.sleep(1)
+                
+                # Clicar em "Consultar Detalhe" no menu de contexto
+                consultar_detalhe_selector = "//div[contains(@class, 'ctxmenu-name') and contains(text(), 'Consultar Detalhe')]"
+                try:
+                    await self.page.click(consultar_detalhe_selector)
+                    logger.info("Clicado em 'Consultar Detalhe' no menu de contexto")
+                    
+                    # Aguardar carregamento dos detalhes
+                    await wait_for_network_idle(self.page, timeout=15000)
+                    await asyncio.sleep(2)
+                except Exception as e:
+                    logger.error(f"Erro ao clicar em 'Consultar Detalhe': {e}")
+                    await self.page.screenshot(path="menu_contexto_error.png")
             
             # Extrair morada
             try:
@@ -380,31 +405,21 @@ class WondercomClient:
             if estado_wo == "IN PROGRESS":
                 logger.info("Executando etapa de IN PROGRESS -> ALLOCATED")
                 
-                # Clicar na linha da WO - usando exatamente a mesma lógica do Selenium
-                row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
-                
-                # Primeiro clique normal para selecionar a linha
-                await self.page.click(row_xpath)
-                logger.info(f"Clique normal na linha da WO {work_order_id}")
-                
-                # Aguardar um pouco para garantir que a linha foi selecionada
-                await asyncio.sleep(1)
-                
-                # Clicar com botão direito para abrir menu de contexto
-                row_element = await self.page.query_selector(row_xpath)
-                if not row_element:
-                    return {
-                        "success": False,
-                        "message": f"Não foi possível encontrar a linha da WO {work_order_id} para clique com botão direito.",
-                        "dados": dados_wo
-                    }
-                
-                # Clique com botão direito
-                await row_element.click(button="right")
-                logger.info(f"Clique com botão direito na linha da WO {work_order_id}")
-                
-                # Aguardar um pouco para o menu de contexto aparecer
-                await asyncio.sleep(1)
+                # Clicar na célula do estado para selecionar a linha
+                if hasattr(self, 'estado_cell') and self.estado_cell:
+                    # Primeiro clique normal (esquerdo)
+                    await self.estado_cell.click()
+                    logger.info(f"Clique normal na célula de estado da WO {work_order_id}")
+                    
+                    # Aguardar um pouco para garantir que a linha foi selecionada
+                    await asyncio.sleep(1)
+                    
+                    # Clique com botão direito
+                    await self.estado_cell.click(button="right")
+                    logger.info(f"Clique com botão direito na célula de estado da WO {work_order_id}")
+                    
+                    # Aguardar um pouco para o menu de contexto aparecer
+                    await asyncio.sleep(1)
                 
                 if await self.clicar_por_texto("Avançar Auto-Alocacao"):
                     if await self.clicar_por_texto("Evoluir WorkOrder"):
@@ -437,31 +452,21 @@ class WondercomClient:
             # Lógica para outros estados
             logger.info(f"Tentando alocar WO {work_order_id} do estado {estado_wo}")
             
-            # Clicar na linha da WO - usando exatamente a mesma lógica do Selenium
-            row_xpath = f"//tr[@class='v-table-row'][.//div[contains(text(), '{work_order_id}')]]"
-            
-            # Primeiro clique normal para selecionar a linha
-            await self.page.click(row_xpath)
-            logger.info(f"Clique normal na linha da WO {work_order_id}")
-            
-            # Aguardar um pouco para garantir que a linha foi selecionada
-            await asyncio.sleep(1)
-            
-            # Clicar com botão direito para abrir menu de contexto
-            row_element = await self.page.query_selector(row_xpath)
-            if not row_element:
-                return {
-                    "success": False,
-                    "message": f"Não foi possível encontrar a linha da WO {work_order_id} para clique com botão direito.",
-                    "dados": dados_wo
-                }
-            
-            # Clique com botão direito
-            await row_element.click(button="right")
-            logger.info(f"Clique com botão direito na linha da WO {work_order_id}")
-            
-            # Aguardar um pouco para o menu de contexto aparecer
-            await asyncio.sleep(1)
+            # Clicar na célula do estado para selecionar a linha
+            if hasattr(self, 'estado_cell') and self.estado_cell:
+                # Primeiro clique normal (esquerdo)
+                await self.estado_cell.click()
+                logger.info(f"Clique normal na célula de estado da WO {work_order_id}")
+                
+                # Aguardar um pouco para garantir que a linha foi selecionada
+                await asyncio.sleep(1)
+                
+                # Clique com botão direito
+                await self.estado_cell.click(button="right")
+                logger.info(f"Clique com botão direito na célula de estado da WO {work_order_id}")
+                
+                # Aguardar um pouco para o menu de contexto aparecer
+                await asyncio.sleep(1)
             
             if await self.clicar_por_texto("Avançar"):
                 # Espera adaptativa
