@@ -502,7 +502,7 @@ const WorkOrderAllocation = () => {
           clearInterval(interval);
           return 100;
         }
-        return prev + (100 / 60); // Incremento para completar em 60 segundos
+        return prev + (100 / 30); // Incremento para completar em 60 segundos
       });
     }, 1000);
     
