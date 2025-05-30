@@ -305,6 +305,11 @@ const determinarCorFibra = (corTexto, corHex) => {
   return resultado;
 };
 
+// Função para validar o formato do número da WO
+const validarFormatoWO = (numero) => {
+  return /^\d{8}$/.test(numero);
+};
+
 // Função para determinar a cor da fibra com base na dona de rede e porto primário
 const determinarCorFibraPorRegras = (donaRede, portoEntrada, fibra) => {
   // Valores padrão
